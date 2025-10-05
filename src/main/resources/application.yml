@@ -3,10 +3,10 @@ spring:
     name: modura-server
 
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver # MySQL JDBC 드라이버 클래스 이름
-    url: ${DB_URL} # jdbc:mysql://localhost:3306/{데이터베이스명}
-    username: ${DB_USER} # MySQL 유저 이름
-    password: ${DB_PW} # MySQL 비밀번호
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PW}
 
   jpa:
     database: mysql
