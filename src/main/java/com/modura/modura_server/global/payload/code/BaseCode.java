@@ -1,7 +1,9 @@
 package com.modura.modura_server.global.payload.code;
 
-public interface BaseCode {
-    ReasonDTO getReason();
+import org.springframework.http.HttpStatus;
 
-    ReasonDTO getReasonHttpStatus();
+public interface BaseCode {
+    HttpStatus getHttpStatus();
+    String getCode();
+    String getMessage();
 }
