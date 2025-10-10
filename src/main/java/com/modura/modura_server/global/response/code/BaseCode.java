@@ -1,4 +1,4 @@
-package com.modura.modura_server.global.payload.code;
+package com.modura.modura_server.global.response.code;
 
 import org.springframework.http.HttpStatus;
 

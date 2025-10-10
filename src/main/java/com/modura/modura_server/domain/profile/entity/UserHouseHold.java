@@ -1,7 +1,5 @@
-package com.modura.modura_server.domain.profile.entity.mapping;
+package com.modura.modura_server.domain.profile.entity;
 
-import com.modura.modura_server.domain.profile.entity.UserProfile;
-import com.modura.modura_server.domain.profile.entity.HouseHold;
 import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;

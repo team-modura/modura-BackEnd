@@ -1,8 +1,7 @@
 package com.modura.modura_server.domain.user.entity;
 
-import com.modura.modura_server.domain.profile.entity.UserProfile;
 import com.modura.modura_server.global.entity.BaseEntity;
-import com.modura.modura_server.global.enums.Gender;
+import com.modura.modura_server.domain.user.entity.enums.Gender;
 import jakarta.persistence.*;
 import lombok.*;
 

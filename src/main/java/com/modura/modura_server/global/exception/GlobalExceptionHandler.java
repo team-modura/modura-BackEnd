@@ -1,8 +1,8 @@
-package com.modura.modura_server.global.payload.exception;
+package com.modura.modura_server.global.exception;
 
-import com.modura.modura_server.global.payload.ApiResponse;
-import com.modura.modura_server.global.payload.code.BaseCode;
-import com.modura.modura_server.global.payload.code.status.ErrorStatus;
+import com.modura.modura_server.global.response.ApiResponse;
+import com.modura.modura_server.global.response.code.BaseCode;
+import com.modura.modura_server.global.response.code.status.ErrorStatus;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +24,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;

@@ -2,8 +2,8 @@ package com.modura.modura_server.domain.profile.entity;
 
 import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.global.entity.BaseEntity;
-import com.modura.modura_server.global.enums.Assets;
-import com.modura.modura_server.global.enums.Car;
+import com.modura.modura_server.domain.profile.entity.enums.Assets;
+import com.modura.modura_server.domain.profile.entity.enums.Car;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -1,10 +1,10 @@
-package com.modura.modura_server.global.payload;
+package com.modura.modura_server.global.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.modura.modura_server.global.payload.code.BaseCode;
-import com.modura.modura_server.global.payload.code.status.SuccessStatus;
+import com.modura.modura_server.global.response.code.BaseCode;
+import com.modura.modura_server.global.response.code.status.SuccessStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

@@ -1,6 +1,6 @@
-package com.modura.modura_server.global.payload.code.status;
+package com.modura.modura_server.global.response.code.status;
 
-import com.modura.modura_server.global.payload.code.BaseCode;
+import com.modura.modura_server.global.response.code.BaseCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;

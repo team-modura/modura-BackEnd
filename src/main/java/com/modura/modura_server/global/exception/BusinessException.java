@@ -1,6 +1,6 @@
-package com.modura.modura_server.global.payload.exception;
+package com.modura.modura_server.global.exception;
 
-import com.modura.modura_server.global.payload.code.BaseCode;
+import com.modura.modura_server.global.response.code.BaseCode;
 import lombok.Getter;
 
 @Getter
