@@ -1,15 +1,12 @@
 package com.modura.modura_server.domain.user.entity;
 
-import com.modura.modura_server.domain.announcement.entity.Likes;
-import com.modura.modura_server.domain.profile.entity.Profile;
+import com.modura.modura_server.domain.profile.entity.UserProfile;
 import com.modura.modura_server.global.entity.BaseEntity;
 import com.modura.modura_server.global.enums.Gender;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Builder
@@ -29,6 +26,7 @@ public class User extends BaseEntity {
     @Column(name = "oauth_id")
     private String oauthId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "gender", nullable = false)
     private Gender gender;
 
@@ -43,11 +41,4 @@ public class User extends BaseEntity {
 
     @Column(name = "image", columnDefinition = "TEXT")
     private String image;
-
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @JoinColumn(name = "id")
-    private Profile userProfile;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Likes> likesList = new ArrayList<>();
 }

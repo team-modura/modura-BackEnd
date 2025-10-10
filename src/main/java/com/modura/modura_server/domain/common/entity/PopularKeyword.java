@@ -1,5 +1,6 @@
 package com.modura.modura_server.domain.common.entity;
 
+import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -12,9 +13,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Table(name = "popularKeywords")
+@Table(name = "popular_keyword")
 @EntityListeners(AuditingEntityListener.class)
-public class PopularKeywords {
+public class PopularKeyword extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

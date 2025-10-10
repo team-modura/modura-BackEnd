@@ -1,6 +1,7 @@
 package com.modura.modura_server.domain.announcement.entity;
 
 import com.modura.modura_server.domain.user.entity.User;
+import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,7 +16,7 @@ import lombok.*;
                 columnNames = {"user_id", "annoucement_id"}
         )
 })
-public class Likes {
+public class Likes extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

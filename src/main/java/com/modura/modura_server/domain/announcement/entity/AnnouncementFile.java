@@ -1,5 +1,6 @@
 package com.modura.modura_server.domain.announcement.entity;
 
+import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -9,7 +10,7 @@ import lombok.*;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
 @Table(name = "announcement_file")
-public class AnnouncementFile {
+public class AnnouncementFile extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
