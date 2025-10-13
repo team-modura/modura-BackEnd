@@ -1,0 +1,23 @@
+services:
+  modura-api:
+    expose:
+      - "8080"
+    restart: always
+    environment:
+      # 운영 환경용 Spring Profile 활성화 (application-prod.yaml 로드)
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:mysql://${DB_URL}:3306/${DB_DATABASE}?serverTimezone=Asia/Seoul
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+  mysql:
+    restart: always
+  redis:
+    restart: always
+  nginx:
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/backend_upstream.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt
+    restart: always

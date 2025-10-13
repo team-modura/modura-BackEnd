@@ -1,0 +1,20 @@
+services:
+  modura-api:
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    environment:
+      # 개발 환경용 Spring Profile 활성화 (application-dev.yaml 로드)
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${DB_DATABASE}?serverTimezone=Asia/Seoul
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+  mysql:
+    ports:
+      - "3306:3306"
+  nginx:
+   ports:
+     - "80:80"
+   volumes:
+     - ./nginx/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro

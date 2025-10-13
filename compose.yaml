@@ -1,0 +1,56 @@
+services:
+  modura-api:
+    build: .
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - spring-network
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD} # healthcheck를 위한 root 비밀번호
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - spring-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    networks:
+      - spring-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Nginx 리버스 프록시 서비스
+  nginx:
+    image: nginx:stable-alpine
+    networks:
+      - spring-network
+    depends_on:
+      - modura-api
+
+# 데이터 영속성 보장
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  spring-network:
+    driver: bridge
