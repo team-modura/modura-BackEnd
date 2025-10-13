@@ -13,7 +13,7 @@ import lombok.*;
 @Table(name = "likes", uniqueConstraints = {
         @UniqueConstraint(
                 name = "UQ_USER_ANNOUNCEMENT_ID",
-                columnNames = {"user_id", "annoucement_id"}
+                columnNames = {"user_id", "announcement_id"}
         )
 })
 public class Likes extends BaseEntity {
