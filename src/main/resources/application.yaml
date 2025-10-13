@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: modura-server
+
+  jpa:
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        format_sql: true # SQL을 보기 좋게 포맷팅합니다.
+
+  profiles:
+    active: dev

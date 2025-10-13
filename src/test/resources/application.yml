@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb # 메모리 모드로 동작하는 H2 DB를 사용
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: true # SQL 쿼리를 보기 좋게 포맷팅
+    defer-datasource-initialization: true # 데이터 초기화 지연
+
+logging:
+  level:
+    org.hibernate.SQL: debug # 실행되는 SQL 쿼리 로그로 확인
