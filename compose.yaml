@@ -2,8 +2,6 @@ services:
   modura-api:
     build: .
     depends_on:
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
