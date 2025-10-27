@@ -1,11 +1,8 @@
 package com.modura.modura_server.domain.user.entity;
 
-import com.modura.modura_server.domain.user.entity.enums.Gender;
 import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.time.LocalDate;
 
 @Entity
 @Builder
