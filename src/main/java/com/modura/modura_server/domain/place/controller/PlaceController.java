@@ -1,4 +1,4 @@
-package com.modura.modura_server.domain.profile.controller;
+package com.modura.modura_server.domain.place.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -8,9 +8,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/profiles")
-@Tag(name = "Profile")
+@RequestMapping("/api/places")
+@Tag(name = "Place")
 @Validated
-public class ProfileController {
+public class PlaceController {
 
 }

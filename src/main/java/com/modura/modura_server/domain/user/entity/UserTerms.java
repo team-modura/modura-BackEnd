@@ -1,4 +1,4 @@
-package com.modura.modura_server.domain.profile.entity;
+package com.modura.modura_server.domain.user.entity;
 
 import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -9,8 +9,8 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Table(name = "user_real_estate")
-public class UserRealEstate extends BaseEntity {
+@Table(name = "user_terms")
+public class UserTerms extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,9 +18,9 @@ public class UserRealEstate extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private UserProfile userProfile;
+    private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "real_estate_id", nullable = false)
-    private RealEstate realEstate;
+    @JoinColumn(name = "terms_id", nullable = false)
+    private Terms terms;
 }
