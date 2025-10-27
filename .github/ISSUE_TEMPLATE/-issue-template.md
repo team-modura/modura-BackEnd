@@ -1,7 +1,7 @@
 ---
 name: "\bIssue Template"
 about: 기본 이슈
-title: ''
+title: 'feat: '
 labels: ''
 assignees: ''
 
@@ -13,7 +13,4 @@ assignees: ''
 
 ## 작업 상세 내용
 
-- [ ] 
-
-
-## 참고할만한 자료(선택)
+- [ ]
