@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/contents")
+@RequestMapping("/contents")
 @Tag(name = "Content")
 @Validated
 public class ContentController {
