@@ -11,11 +11,12 @@ import io.swagger.v3.oas.models.OpenAPI;
 
 @Configuration
 public class SwaggerConfig {
+
     @Bean
-    public OpenAPI UMCstudyAPI() {
+    public OpenAPI flickerOpenAPI() {
         Info info = new Info()
-                .title("MODURA API")
-                .description("모두라(MODURA) API 명세서")
+                .title("Flicker API")
+                .description("Flicker API 명세서")
                 .version("1.0.0");
         String jwtSchemeName = "JWT TOKEN";
 

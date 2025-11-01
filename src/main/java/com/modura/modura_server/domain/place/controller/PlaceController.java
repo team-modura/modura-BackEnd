@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/places")
+@RequestMapping("/places")
 @Tag(name = "Place")
 @Validated
 public class PlaceController {

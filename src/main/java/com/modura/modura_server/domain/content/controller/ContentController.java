@@ -1,4 +1,4 @@
-package com.modura.modura_server.domain.announcement.controller;
+package com.modura.modura_server.domain.content.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/announcements")
-@Tag(name = "Announcement")
+@RequestMapping("/contents")
+@Tag(name = "Content")
 @Validated
-public class AnnouncementController {
+public class ContentController {
 
 }

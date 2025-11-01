@@ -1,4 +1,4 @@
-package com.modura.modura_server.domain.place.entity;
+package com.modura.modura_server.domain.content.entity;
 
 import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -9,16 +9,15 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Table(name = "review_image")
-public class ReviewImage extends BaseEntity {
+@Table(name = "platform")
+public class Platform extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "place_review_id", nullable = false)
-    private PlaceReview placeReview;
+    @Column(name = "name", nullable = false)
+    private String name;
 
     @Column(name = "image_url", nullable = false, columnDefinition = "TEXT")
     private String imageUrl;

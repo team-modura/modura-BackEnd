@@ -1,4 +1,4 @@
-package com.modura.modura_server.domain.announcement.entity;
+package com.modura.modura_server.domain.content.entity;
 
 import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.global.entity.BaseEntity;
@@ -10,13 +10,8 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Table(name = "likes", uniqueConstraints = {
-        @UniqueConstraint(
-                name = "UQ_USER_ANNOUNCEMENT_ID",
-                columnNames = {"user_id", "announcement_id"}
-        )
-})
-public class Likes extends BaseEntity {
+@Table(name = "content_review")
+public class ContentReview extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,6 +22,12 @@ public class Likes extends BaseEntity {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "announcement_id", nullable = false)
-    private Announcement announcement;
+    @JoinColumn(name = "content_id", nullable = false)
+    private Content content;
+
+    @Column(name = "body", nullable = false)
+    private String body;
+
+    @Column(name = "rating", nullable = false)
+    private Integer rating;
 }

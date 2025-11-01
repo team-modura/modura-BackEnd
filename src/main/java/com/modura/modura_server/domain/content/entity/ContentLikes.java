@@ -1,4 +1,4 @@
-package com.modura.modura_server.domain.place.entity;
+package com.modura.modura_server.domain.content.entity;
 
 import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.global.entity.BaseEntity;
@@ -10,13 +10,13 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Table(name = "place_likes", uniqueConstraints = {
+@Table(name = "content_likes", uniqueConstraints = {
         @UniqueConstraint(
-                name = "UQ_USER_PLACE_ID",
-                columnNames = {"user_id", "place_id"}
+                name = "UQ_USER_CONTENT_ID",
+                columnNames = {"user_id", "content_id"}
         )
 })
-public class PlaceLikes extends BaseEntity {
+public class ContentLikes extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,6 +27,6 @@ public class PlaceLikes extends BaseEntity {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "place_id", nullable = false)
-    private Place place;
+    @JoinColumn(name = "content_id", nullable = false)
+    private Content content;
 }

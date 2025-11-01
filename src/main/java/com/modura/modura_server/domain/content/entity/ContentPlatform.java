@@ -1,6 +1,5 @@
-package com.modura.modura_server.domain.place.entity;
+package com.modura.modura_server.domain.content.entity;
 
-import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,8 +9,13 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Table(name = "place")
-public class Place extends BaseEntity {
+@Table(name = "content_platform", uniqueConstraints = {
+        @UniqueConstraint(
+                name = "UQ_CONTENT_PLATFORM_ID",
+                columnNames = {"content_id", "platform_id"}
+        )
+})
+public class ContentPlatform extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,6 +25,7 @@ public class Place extends BaseEntity {
     @JoinColumn(name = "content_id", nullable = false)
     private Content content;
 
-    @Column(name = "name", nullable = false)
-    private String name;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "platform_id", nullable = false)
+    private Platform platform;
 }

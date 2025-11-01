@@ -3,10 +3,8 @@ package com.modura.modura_server.domain.keyword.entity;
 import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
 
 @Entity
 @Builder
@@ -26,10 +24,6 @@ public class PopularKeyword extends BaseEntity {
 
     @Column(name = "count", nullable = false)
     private Long count;
-
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 
     public void incrementCount() {
         this.count += 1;

@@ -24,4 +24,10 @@ public class PlaceReview extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_id", nullable = false)
     private Place place;
+
+    @Column(name = "body", nullable = false)
+    private String body;
+
+    @Column(name = "rating", nullable = false)
+    private Integer rating;
 }
