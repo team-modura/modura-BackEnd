@@ -1,3 +1,18 @@
+CREATE TABLE `users` (
+                         `id` bigint NOT NULL AUTO_INCREMENT,
+                         `created_at` datetime(6) NOT NULL,
+                         `updated_at` datetime(6) NOT NULL,
+                         `birth` varchar(255) NOT NULL,
+                         `gender` enum('FEMALE','MALE','NONE') NOT NULL,
+                         `image` text,
+                         `inactive_date` date DEFAULT NULL,
+                         `name` varchar(255) NOT NULL,
+                         `nickname` varchar(255) NOT NULL,
+                         `oauth_id` varchar(255) DEFAULT NULL,
+                         `phone` varchar(13) NOT NULL,
+                         PRIMARY KEY (`id`)
+);
+
 CREATE TABLE `category` (
                             `id` bigint NOT NULL AUTO_INCREMENT,
                             `created_at` datetime(6) NOT NULL,
@@ -42,6 +57,15 @@ CREATE TABLE `content_likes` (
                                  KEY `FK3phynxqdk3ogejthkee6m3tr4` (`content_id`),
                                  CONSTRAINT `FK3phynxqdk3ogejthkee6m3tr4` FOREIGN KEY (`content_id`) REFERENCES `content` (`id`),
                                  CONSTRAINT `FKtq9ln30we2d1nbibcevn56cxi` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+);
+
+CREATE TABLE `platform` (
+                            `id` bigint NOT NULL AUTO_INCREMENT,
+                            `created_at` datetime(6) NOT NULL,
+                            `updated_at` datetime(6) NOT NULL,
+                            `image_url` text NOT NULL,
+                            `name` varchar(255) NOT NULL,
+                            PRIMARY KEY (`id`)
 );
 
 CREATE TABLE `content_platform` (
@@ -111,24 +135,6 @@ CREATE TABLE `place_review` (
                                 CONSTRAINT `FKet8vy13m7akh641174y4dn8v5` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 );
 
-CREATE TABLE `platform` (
-                            `id` bigint NOT NULL AUTO_INCREMENT,
-                            `created_at` datetime(6) NOT NULL,
-                            `updated_at` datetime(6) NOT NULL,
-                            `image_url` text NOT NULL,
-                            `name` varchar(255) NOT NULL,
-                            PRIMARY KEY (`id`)
-);
-
-CREATE TABLE `popular_keyword` (
-                                   `id` bigint NOT NULL AUTO_INCREMENT,
-                                   `created_at` datetime(6) NOT NULL,
-                                   `updated_at` datetime(6) NOT NULL,
-                                   `count` bigint NOT NULL,
-                                   `keyword` varchar(255) NOT NULL,
-                                   PRIMARY KEY (`id`)
-);
-
 CREATE TABLE `review_image` (
                                 `id` bigint NOT NULL AUTO_INCREMENT,
                                 `created_at` datetime(6) NOT NULL,
@@ -138,6 +144,15 @@ CREATE TABLE `review_image` (
                                 PRIMARY KEY (`id`),
                                 KEY `FKo5idjtruc4rm0me3u8l3fk9ge` (`place_review_id`),
                                 CONSTRAINT `FKo5idjtruc4rm0me3u8l3fk9ge` FOREIGN KEY (`place_review_id`) REFERENCES `place_review` (`id`)
+);
+
+CREATE TABLE `popular_keyword` (
+                                   `id` bigint NOT NULL AUTO_INCREMENT,
+                                   `created_at` datetime(6) NOT NULL,
+                                   `updated_at` datetime(6) NOT NULL,
+                                   `count` bigint NOT NULL,
+                                   `keyword` varchar(255) NOT NULL,
+                                   PRIMARY KEY (`id`)
 );
 
 CREATE TABLE `terms` (
@@ -161,19 +176,4 @@ CREATE TABLE `user_terms` (
                               KEY `FKn125t6gpo973wja3uarq4kd5f` (`user_id`),
                               CONSTRAINT `FKn125t6gpo973wja3uarq4kd5f` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
                               CONSTRAINT `FKsv90iyco7g8yl9kbml0m5pjhl` FOREIGN KEY (`terms_id`) REFERENCES `terms` (`id`)
-);
-
-CREATE TABLE `users` (
-                         `id` bigint NOT NULL AUTO_INCREMENT,
-                         `created_at` datetime(6) NOT NULL,
-                         `updated_at` datetime(6) NOT NULL,
-                         `birth` varchar(255) NOT NULL,
-                         `gender` enum('FEMALE','MALE','NONE') NOT NULL,
-                         `image` text,
-                         `inactive_date` date DEFAULT NULL,
-                         `name` varchar(255) NOT NULL,
-                         `nickname` varchar(255) NOT NULL,
-                         `oauth_id` varchar(255) DEFAULT NULL,
-                         `phone` varchar(13) NOT NULL,
-                         PRIMARY KEY (`id`)
 );
