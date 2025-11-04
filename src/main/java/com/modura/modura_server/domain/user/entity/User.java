@@ -1,7 +1,7 @@
 package com.modura.modura_server.domain.user.entity;
 
 import com.modura.modura_server.global.entity.BaseEntity;
-import com.modura.modura_server.domain.user.entity.enums.Gender;
+import com.modura.modura_server.domain.user.entity.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -25,22 +25,10 @@ public class User extends BaseEntity {
     @Column(name = "oauth_id")
     private String oauthId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "gender", nullable = false)
-    private Gender gender;
-
-    @Column(name = "name", nullable = false)
-    private String name;
-
     @Column(name = "nickname", nullable = false)
     private String nickname;
 
-    @Column(name = "birth", nullable = false)
-    private String birth;
-
-    @Column(name = "phone", nullable = false, length = 13)
-    private String phone;
-
-    @Column(name = "image", columnDefinition = "TEXT")
-    private String image;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
 }
