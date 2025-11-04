@@ -16,4 +16,14 @@ public class UserResponseDTO {
         String body;
         Boolean optional;
     }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetUserDTO {
+        Long id;
+        String accessToken;
+        String refreshToken;
+    }
 }
