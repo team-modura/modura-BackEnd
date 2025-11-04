@@ -30,6 +30,6 @@ public class UserCommandServiceImpl implements UserCommandService {
         String accessToken = jwtProvider.generateAccessToken(user);
         String refreshToken = jwtProvider.generateRefreshToken(user);
 
-        return AuthConverter.toUser(user, accessToken, refreshToken);
+        return AuthConverter.toGetUserDTO(user, accessToken, refreshToken);
     }
 }

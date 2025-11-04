@@ -5,7 +5,7 @@ import com.modura.modura_server.domain.user.entity.User;
 
 public class AuthConverter {
 
-    public static UserResponseDTO.GetUserDTO toUser(User user, String accessToken, String refreshToken) {
+    public static UserResponseDTO.GetUserDTO toGetUserDTO(User user, String accessToken, String refreshToken) {
 
         return UserResponseDTO.GetUserDTO.builder()
                 .id(user.getId())

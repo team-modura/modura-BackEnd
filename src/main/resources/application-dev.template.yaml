@@ -15,4 +15,4 @@ server:
   port: 8080
 
 jwt:
-  secret: "1KrlBnccKJFSLorPle03vTTM5s8IPUIDQXh37SSFx6RcLjznO5nXRzWOD67FRoNA"
+  secret: YOUR_JWT_SECRET
