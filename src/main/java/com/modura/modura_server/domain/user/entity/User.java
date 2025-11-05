@@ -23,7 +23,7 @@ public class User extends BaseEntity {
     private LocalDate inactiveDate;
 
     @Column(name = "oauth_id")
-    private String oauthId;
+    private Long oauthId;
 
     @Column(name = "nickname", nullable = false)
     private String nickname;

@@ -13,4 +13,13 @@ public class AuthConverter {
                 .refreshToken(refreshToken)
                 .build();
     }
+
+    public static UserResponseDTO.KakaoLoginDTO toKakaoLoginDTO(User user, String accessToken, String refreshToken) {
+
+        return UserResponseDTO.KakaoLoginDTO.builder()
+                .id(user.getId())
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
 }

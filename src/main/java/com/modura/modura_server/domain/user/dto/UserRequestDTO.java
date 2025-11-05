@@ -16,4 +16,13 @@ public class UserRequestDTO {
         @NotBlank(message = "닉네임은 필수입니다.")
         String nickname;
     }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class KakaoLoginDTO {
+        @NotBlank
+        String code;
+    }
 }
