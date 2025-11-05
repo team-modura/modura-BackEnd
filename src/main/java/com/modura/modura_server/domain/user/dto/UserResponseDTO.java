@@ -1,6 +1,5 @@
 package com.modura.modura_server.domain.user.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,63 +15,5 @@ public class UserResponseDTO {
         String title;
         String body;
         Boolean optional;
-    }
-
-    @Builder
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class GetUserDTO {
-        Long id;
-        String accessToken;
-        String refreshToken;
-    }
-
-    @Builder
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class LoginDTO {
-        Long id;
-        String accessToken;
-        String refreshToken;
-    }
-
-    @Builder
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class GetKakaoTokenDTO {
-        @JsonProperty("token_type")
-        private String tokenType;
-
-        @JsonProperty("access_token")
-        private String accessToken;
-
-        @JsonProperty("refresh_token")
-        private String refreshToken;
-    }
-
-    @Builder
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class GetKakaoUserInfoDTO {
-        Long id;
-
-        @JsonProperty("kakao_account")
-        private KakaoAccount kakaoAccount;
-
-        @Getter
-        @NoArgsConstructor
-        public static class KakaoAccount {
-            private Profile profile;
-
-            @Getter
-            @NoArgsConstructor
-            public static class Profile {
-                private String nickname;
-            }
-        }
     }
 }

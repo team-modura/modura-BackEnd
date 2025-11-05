@@ -1,11 +1,11 @@
 package com.modura.modura_server.domain.user.service;
 
-import com.modura.modura_server.domain.user.dto.UserRequestDTO;
-import com.modura.modura_server.domain.user.dto.UserResponseDTO;
+import com.modura.modura_server.domain.user.dto.AuthRequestDTO;
+import com.modura.modura_server.domain.user.dto.AuthResponseDTO;
 
 public interface UserCommandService {
 
-    UserResponseDTO.GetUserDTO createUser(UserRequestDTO.CreateUserDTO request);
-    UserResponseDTO.LoginDTO kakaoLogin(UserRequestDTO.KakaoLoginDTO request);
-    UserResponseDTO.LoginDTO testLogin(Long userId);
+    AuthResponseDTO.GetUserDTO createUser(AuthRequestDTO.CreateUserDTO request);
+    AuthResponseDTO.GetUserDTO kakaoLogin(AuthRequestDTO.KakaoLoginDTO request);
+    AuthResponseDTO.GetUserDTO testLogin(Long userId);
 }

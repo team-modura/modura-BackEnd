@@ -1,8 +1,8 @@
 package com.modura.modura_server.domain.user.service;
 
 import com.modura.modura_server.domain.user.converter.AuthConverter;
-import com.modura.modura_server.domain.user.dto.UserRequestDTO;
-import com.modura.modura_server.domain.user.dto.UserResponseDTO;
+import com.modura.modura_server.domain.user.dto.AuthRequestDTO;
+import com.modura.modura_server.domain.user.dto.AuthResponseDTO;
 import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.domain.user.entity.enums.Role;
 import com.modura.modura_server.domain.user.repository.UserRepository;
@@ -39,7 +39,7 @@ public class UserCommandServiceImpl implements UserCommandService {
 
     @Override
     @Transactional
-    public UserResponseDTO.GetUserDTO createUser(UserRequestDTO.CreateUserDTO request) {
+    public AuthResponseDTO.GetUserDTO createUser(AuthRequestDTO.CreateUserDTO request) {
 
         User user = User.builder()
                 .nickname(request.getNickname())
@@ -55,16 +55,23 @@ public class UserCommandServiceImpl implements UserCommandService {
 
     @Override
     @Transactional
-    public UserResponseDTO.LoginDTO kakaoLogin(UserRequestDTO.KakaoLoginDTO request) {
+    public AuthResponseDTO.GetUserDTO kakaoLogin(AuthRequestDTO.KakaoLoginDTO request) {
 
-        UserResponseDTO.GetKakaoTokenDTO kakaoToken = getKakaoToken(request.getCode());
-        UserResponseDTO.GetKakaoUserInfoDTO userInfo = getKakaoUserInfo(kakaoToken.getAccessToken());
+        AuthResponseDTO.GetKakaoTokenDTO kakaoToken = getKakaoToken(request.getCode());
+        AuthResponseDTO.GetKakaoUserInfoDTO userInfo = getKakaoUserInfo(kakaoToken.getAccessToken());
+
+        String nickname =
+                userInfo.getKakaoAccount() != null
+                        && userInfo.getKakaoAccount().getProfile() != null
+                        && userInfo.getKakaoAccount().getProfile().getNickname() != null
+                        ? userInfo.getKakaoAccount().getProfile().getNickname()
+                        : "카카오 사용자_" + userInfo.getId();
 
         User user = userRepository.findByOauthId(userInfo.getId())
                 .orElseGet(() -> {
                     User newUser = User.builder()
                             .oauthId(userInfo.getId())
-                            .nickname(userInfo.getKakaoAccount().getProfile().getNickname())
+                            .nickname(nickname)
                             .role(Role.ROLE_USER)
                             .build();
                     return userRepository.save(newUser);
@@ -73,12 +80,11 @@ public class UserCommandServiceImpl implements UserCommandService {
         String accessToken = jwtProvider.generateAccessToken(user);
         String refreshToken = jwtProvider.generateRefreshToken(user);
 
-
-        return AuthConverter.toLoginDTO(user, accessToken, refreshToken);
+        return AuthConverter.toGetUserDTO(user, accessToken, refreshToken);
     }
 
     @Override
-    public UserResponseDTO.LoginDTO testLogin(Long userId) {
+    public AuthResponseDTO.GetUserDTO testLogin(Long userId) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -86,10 +92,10 @@ public class UserCommandServiceImpl implements UserCommandService {
         String accessToken = jwtProvider.generateAccessToken(user);
         String refreshToken = jwtProvider.generateRefreshToken(user);
 
-        return AuthConverter.toLoginDTO(user, accessToken, refreshToken);
+        return AuthConverter.toGetUserDTO(user, accessToken, refreshToken);
     }
 
-    private UserResponseDTO.GetKakaoTokenDTO getKakaoToken(String code) {
+    private AuthResponseDTO.GetKakaoTokenDTO getKakaoToken(String code) {
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "authorization_code");
@@ -102,17 +108,17 @@ public class UserCommandServiceImpl implements UserCommandService {
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(BodyInserters.fromFormData(formData))
                 .retrieve()
-                .bodyToMono(UserResponseDTO.GetKakaoTokenDTO.class)
+                .bodyToMono(AuthResponseDTO.GetKakaoTokenDTO.class)
                 .block();
     }
 
-    private UserResponseDTO.GetKakaoUserInfoDTO getKakaoUserInfo(String accessToken) {
+    private AuthResponseDTO.GetKakaoUserInfoDTO getKakaoUserInfo(String accessToken) {
 
         return webClient.get()
                 .uri(KAKAO_USER_INFO_URI)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .retrieve()
-                .bodyToMono(UserResponseDTO.GetKakaoUserInfoDTO.class)
+                .bodyToMono(AuthResponseDTO.GetKakaoUserInfoDTO.class)
                 .block();
     }
 }

@@ -1,13 +1,14 @@
 package com.modura.modura_server.domain.user.controller;
 
-import com.modura.modura_server.domain.user.dto.UserRequestDTO;
-import com.modura.modura_server.domain.user.dto.UserResponseDTO;
+import com.modura.modura_server.domain.user.dto.AuthRequestDTO;
+import com.modura.modura_server.domain.user.dto.AuthResponseDTO;
 import com.modura.modura_server.domain.user.service.UserCommandService;
 import com.modura.modura_server.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,9 +23,9 @@ public class AuthController {
 
     @Operation(summary = "회원가입(테스트용)")
     @PostMapping("/signup")
-    public ApiResponse<UserResponseDTO.GetUserDTO> createUser(@Valid @RequestBody UserRequestDTO.CreateUserDTO request) {
+    public ApiResponse<AuthResponseDTO.GetUserDTO> createUser(@Valid @RequestBody AuthRequestDTO.CreateUserDTO request) {
 
-        UserResponseDTO.GetUserDTO response = userCommandService.createUser(request);
+        AuthResponseDTO.GetUserDTO response = userCommandService.createUser(request);
 
         return ApiResponse.onSuccess(response);
     }
@@ -32,18 +33,19 @@ public class AuthController {
     @Operation(summary = "인가 코드로 카카오 로그인",
             description = "https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${REST_API_KEY}&redirect_uri=http://localhost:8080/redirect")
     @PostMapping("/login")
-    public ApiResponse<UserResponseDTO.LoginDTO> kakaoLogin(@Valid @RequestBody UserRequestDTO.KakaoLoginDTO request) {
+    public ApiResponse<AuthResponseDTO.GetUserDTO> kakaoLogin(@Valid @RequestBody AuthRequestDTO.KakaoLoginDTO request) {
 
-        UserResponseDTO.LoginDTO response = userCommandService.kakaoLogin(request);
+        AuthResponseDTO.GetUserDTO response = userCommandService.kakaoLogin(request);
 
         return ApiResponse.onSuccess(response);
     }
 
-    @Operation(summary = "userId로 로그인")
+    @Operation(summary = "userId로 로그인 (테스트용)")
     @PostMapping("/token")
-    public ApiResponse<UserResponseDTO.LoginDTO> testLogin(@Valid @RequestBody Long userId) {
+    @Profile({"dev"})
+    public ApiResponse<AuthResponseDTO.GetUserDTO> testLogin(@Valid @RequestBody Long userId) {
 
-        UserResponseDTO.LoginDTO response = userCommandService.testLogin(userId);
+        AuthResponseDTO.GetUserDTO response = userCommandService.testLogin(userId);
 
         return ApiResponse.onSuccess(response);
     }
