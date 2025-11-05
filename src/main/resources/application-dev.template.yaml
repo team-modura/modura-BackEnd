@@ -16,3 +16,7 @@ server:
 
 jwt:
   secret: YOUR_JWT_SECRET
+
+kakao:
+  client-id: CLIENT_ID
+  redirect-uri: REDIRECT_URI
