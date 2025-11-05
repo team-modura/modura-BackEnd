@@ -32,7 +32,7 @@ public class UserResponseDTO {
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class KakaoLoginDTO {
+    public static class LoginDTO {
         Long id;
         String accessToken;
         String refreshToken;

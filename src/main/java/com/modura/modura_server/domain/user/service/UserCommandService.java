@@ -6,5 +6,6 @@ import com.modura.modura_server.domain.user.dto.UserResponseDTO;
 public interface UserCommandService {
 
     UserResponseDTO.GetUserDTO createUser(UserRequestDTO.CreateUserDTO request);
-    UserResponseDTO.KakaoLoginDTO kakaoLogin(UserRequestDTO.KakaoLoginDTO request);
+    UserResponseDTO.LoginDTO kakaoLogin(UserRequestDTO.KakaoLoginDTO request);
+    UserResponseDTO.LoginDTO testLogin(Long userId);
 }

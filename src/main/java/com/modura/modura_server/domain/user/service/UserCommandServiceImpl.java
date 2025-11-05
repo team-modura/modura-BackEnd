@@ -6,9 +6,10 @@ import com.modura.modura_server.domain.user.dto.UserResponseDTO;
 import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.domain.user.entity.enums.Role;
 import com.modura.modura_server.domain.user.repository.UserRepository;
+import com.modura.modura_server.global.exception.BusinessException;
 import com.modura.modura_server.global.jwt.JwtProvider;
+import com.modura.modura_server.global.response.code.status.ErrorStatus;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -19,8 +20,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.Optional;
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserCommandServiceImpl implements UserCommandService {
@@ -56,10 +55,9 @@ public class UserCommandServiceImpl implements UserCommandService {
 
     @Override
     @Transactional
-    public UserResponseDTO.KakaoLoginDTO kakaoLogin(UserRequestDTO.KakaoLoginDTO request) {
+    public UserResponseDTO.LoginDTO kakaoLogin(UserRequestDTO.KakaoLoginDTO request) {
 
         UserResponseDTO.GetKakaoTokenDTO kakaoToken = getKakaoToken(request.getCode());
-        log.info("\n\nkakaoToken: {}", kakaoToken);
         UserResponseDTO.GetKakaoUserInfoDTO userInfo = getKakaoUserInfo(kakaoToken.getAccessToken());
 
         User user = userRepository.findByOauthId(userInfo.getId())
@@ -76,7 +74,19 @@ public class UserCommandServiceImpl implements UserCommandService {
         String refreshToken = jwtProvider.generateRefreshToken(user);
 
 
-        return AuthConverter.toKakaoLoginDTO(user, accessToken, refreshToken);
+        return AuthConverter.toLoginDTO(user, accessToken, refreshToken);
+    }
+
+    @Override
+    public UserResponseDTO.LoginDTO testLogin(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        String accessToken = jwtProvider.generateAccessToken(user);
+        String refreshToken = jwtProvider.generateRefreshToken(user);
+
+        return AuthConverter.toLoginDTO(user, accessToken, refreshToken);
     }
 
     private UserResponseDTO.GetKakaoTokenDTO getKakaoToken(String code) {
@@ -86,7 +96,7 @@ public class UserCommandServiceImpl implements UserCommandService {
         formData.add("client_id", CLIENT_ID);
         formData.add("redirect_uri", REDIRECT_URI);
         formData.add("code", code);
-        log.info("\n\ngetKakaoToken code: {}", code);
+
         return webClient.post()
                 .uri(KAKAO_TOKEN_URI)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -97,7 +107,7 @@ public class UserCommandServiceImpl implements UserCommandService {
     }
 
     private UserResponseDTO.GetKakaoUserInfoDTO getKakaoUserInfo(String accessToken) {
-        log.info("\n\ngetKakaoUserInfo: {}", accessToken);
+
         return webClient.get()
                 .uri(KAKAO_USER_INFO_URI)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)

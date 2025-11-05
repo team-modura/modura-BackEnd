@@ -14,9 +14,9 @@ public class AuthConverter {
                 .build();
     }
 
-    public static UserResponseDTO.KakaoLoginDTO toKakaoLoginDTO(User user, String accessToken, String refreshToken) {
+    public static UserResponseDTO.LoginDTO toLoginDTO(User user, String accessToken, String refreshToken) {
 
-        return UserResponseDTO.KakaoLoginDTO.builder()
+        return UserResponseDTO.LoginDTO.builder()
                 .id(user.getId())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
