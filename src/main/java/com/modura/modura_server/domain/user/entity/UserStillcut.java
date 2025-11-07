@@ -9,19 +9,18 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Table(name = "terms")
-public class Terms extends BaseEntity {
+@Table(name = "user_stillcut")
+public class UserStillcut extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "title")
-    private String title;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(name = "body")
-    private String body;
-
-    @Column(name = "optional")
-    private Boolean optional;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "stillcut_id", nullable = false)
+    private Stillcut stillcut;
 }

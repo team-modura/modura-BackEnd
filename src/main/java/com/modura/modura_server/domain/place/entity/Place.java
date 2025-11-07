@@ -17,10 +17,15 @@ public class Place extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "content_id", nullable = false)
-    private Content content;
-
     @Column(name = "name", nullable = false)
     private String name;
+
+    @Column(name = "thumbnail", columnDefinition = "TEXT")
+    private String thumbnail;
+
+    @Column(name = "latitude", nullable = false)
+    private Float latitude;
+
+    @Column(name = "longitude", nullable = false)
+    private Float longitude;
 }
