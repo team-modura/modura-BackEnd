@@ -38,6 +38,8 @@ public class UserCommandServiceImpl implements UserCommandService {
         user.updateAddress(request.getAddress());
 
         if (request.getCategoryList() != null && !request.getCategoryList().isEmpty()) {
+            userCategoryRepository.deleteByUser(user);
+
             List<UserCategory> newUserCategories = request.getCategoryList().stream()
                     .map(categoryId -> {
                         // Category 엔티티 조회

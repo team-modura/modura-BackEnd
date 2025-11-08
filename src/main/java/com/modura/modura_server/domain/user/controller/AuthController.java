@@ -3,7 +3,6 @@ package com.modura.modura_server.domain.user.controller;
 import com.modura.modura_server.domain.user.dto.AuthRequestDTO;
 import com.modura.modura_server.domain.user.dto.AuthResponseDTO;
 import com.modura.modura_server.domain.user.service.AuthCommandService;
-import com.modura.modura_server.domain.user.service.UserCommandService;
 import com.modura.modura_server.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

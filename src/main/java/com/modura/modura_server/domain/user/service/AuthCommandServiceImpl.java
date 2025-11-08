@@ -22,6 +22,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
+
 @Service
 @RequiredArgsConstructor
 public class AuthCommandServiceImpl implements AuthCommandService {
@@ -111,7 +113,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
                 .body(BodyInserters.fromFormData(formData))
                 .retrieve()
                 .bodyToMono(AuthResponseDTO.GetKakaoTokenDTO.class)
-                .block();
+                .block(Duration.ofSeconds(10));
     }
 
     private AuthResponseDTO.GetKakaoUserInfoDTO getKakaoUserInfo(String accessToken) {
@@ -121,6 +123,6 @@ public class AuthCommandServiceImpl implements AuthCommandService {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .retrieve()
                 .bodyToMono(AuthResponseDTO.GetKakaoUserInfoDTO.class)
-                .block();
+                .block(Duration.ofSeconds(10));
     }
 }
