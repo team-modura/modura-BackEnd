@@ -1,6 +1,5 @@
 package com.modura.modura_server.domain.place.entity;
 
-import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -17,10 +16,15 @@ public class Place extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "content_id", nullable = false)
-    private Content content;
-
     @Column(name = "name", nullable = false)
     private String name;
+
+    @Column(name = "thumbnail", columnDefinition = "TEXT")
+    private String thumbnail;
+
+    @Column(name = "latitude", nullable = false)
+    private Float latitude;
+
+    @Column(name = "longitude", nullable = false)
+    private Float longitude;
 }

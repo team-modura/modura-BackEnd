@@ -1,5 +1,6 @@
 package com.modura.modura_server.domain.user.entity;
 
+import com.modura.modura_server.domain.content.entity.Category;
 import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -9,8 +10,8 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Table(name = "user_terms")
-public class UserTerms extends BaseEntity {
+@Table(name = "user_category")
+public class UserCategory extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,6 +22,6 @@ public class UserTerms extends BaseEntity {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "terms_id", nullable = false)
-    private Terms terms;
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 }

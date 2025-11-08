@@ -21,7 +21,7 @@ public class Content extends BaseEntity {
     @Column(name = "title_kr", nullable = false)
     private String titleKr;
 
-    @Column(name = "title_eng", nullable = false)
+    @Column(name = "title_eng")
     private String titleEng;
 
     @Column(name = "year")
@@ -32,4 +32,13 @@ public class Content extends BaseEntity {
 
     @Column(name = "thumbnail", columnDefinition = "TEXT")
     private String thumbnail;
+
+    @Column(name = "platform_id")
+    private Integer platformId;
+
+    @Column(name = "type", nullable = false)
+    private Integer type;
+
+    @Column(name = "runtime")
+    private Integer runtime;
 }
