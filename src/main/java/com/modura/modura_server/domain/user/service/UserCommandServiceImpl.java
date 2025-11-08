@@ -1,10 +1,15 @@
 package com.modura.modura_server.domain.user.service;
 
+import com.modura.modura_server.domain.content.entity.Category;
+import com.modura.modura_server.domain.content.repository.CategoryRepository;
 import com.modura.modura_server.domain.user.converter.AuthConverter;
 import com.modura.modura_server.domain.user.dto.AuthRequestDTO;
 import com.modura.modura_server.domain.user.dto.AuthResponseDTO;
+import com.modura.modura_server.domain.user.dto.UserRequestDTO;
 import com.modura.modura_server.domain.user.entity.User;
+import com.modura.modura_server.domain.user.entity.UserCategory;
 import com.modura.modura_server.domain.user.entity.enums.Role;
+import com.modura.modura_server.domain.user.repository.UserCategoryRepository;
 import com.modura.modura_server.domain.user.repository.UserRepository;
 import com.modura.modura_server.global.exception.BusinessException;
 import com.modura.modura_server.global.jwt.JwtProvider;
@@ -20,11 +25,16 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class UserCommandServiceImpl implements UserCommandService {
 
     private final UserRepository userRepository;
+    private final UserCategoryRepository userCategoryRepository;
+    private final CategoryRepository categoryRepository;
     private final JwtProvider jwtProvider;
     private final WebClient webClient;
 
@@ -93,6 +103,32 @@ public class UserCommandServiceImpl implements UserCommandService {
         String refreshToken = jwtProvider.generateRefreshToken(user);
 
         return AuthConverter.toGetUserDTO(user, accessToken, refreshToken);
+    }
+
+    @Override
+    public Void updateUser(User user, UserRequestDTO.UpdateUserDTO request) {
+
+        user.updateAddress(request.getAddress());
+
+        if (request.getCategoryList() != null && !request.getCategoryList().isEmpty()) {
+            List<UserCategory> newUserCategories = request.getCategoryList().stream()
+                    .map(categoryId -> {
+                        // Category 엔티티 조회
+                        Category category = categoryRepository.findById(categoryId.longValue())
+                                .orElseThrow(() -> new BusinessException(ErrorStatus.CATEGORY_NOT_FOUND));
+                        // UserCategory 생성
+                        return UserCategory.builder()
+                                .user(user)
+                                .category(category)
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+
+            // JpaRepository.saveAll()을 사용하여 배치 저장
+            userCategoryRepository.saveAll(newUserCategories);
+        }
+
+        return null;
     }
 
     private AuthResponseDTO.GetKakaoTokenDTO getKakaoToken(String code) {

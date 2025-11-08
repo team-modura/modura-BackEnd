@@ -34,4 +34,8 @@ public class User extends BaseEntity {
 
     @Column(name = "address")
     private String address;
+
+    public void updateAddress(String address) {
+        this.address = address;
+    }
 }
