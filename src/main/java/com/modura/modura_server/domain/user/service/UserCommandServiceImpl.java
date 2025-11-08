@@ -6,10 +6,12 @@ import com.modura.modura_server.domain.user.dto.UserRequestDTO;
 import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.domain.user.entity.UserCategory;
 import com.modura.modura_server.domain.user.repository.UserCategoryRepository;
+import com.modura.modura_server.domain.user.repository.UserRepository;
 import com.modura.modura_server.global.exception.BusinessException;
 import com.modura.modura_server.global.response.code.status.ErrorStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,13 +20,16 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserCommandServiceImpl implements UserCommandService {
 
+    private final UserRepository userRepository;
     private final UserCategoryRepository userCategoryRepository;
     private final CategoryRepository categoryRepository;
 
     @Override
+    @Transactional
     public Void updateUser(User user, UserRequestDTO.UpdateUserDTO request) {
 
         user.updateAddress(request.getAddress());
+        userRepository.save(user);
 
         if (request.getCategoryList() != null && !request.getCategoryList().isEmpty()) {
             List<UserCategory> newUserCategories = request.getCategoryList().stream()
