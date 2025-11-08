@@ -20,3 +20,8 @@ jwt:
 kakao:
   client-id: CLIENT_ID
   redirect-uri: REDIRECT_URI
+
+tmdb:
+  api:
+    base-url: https://api.themoviedb.org/3
+    bearer-token: YOUR_TMDB_BEARER_TOKEN

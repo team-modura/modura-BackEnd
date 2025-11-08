@@ -27,18 +27,18 @@ public class Content extends BaseEntity {
     @Column(name = "year")
     private Integer year;
 
-    @Column(name = "plot")
+    @Column(name = "plot", columnDefinition = "TEXT")
     private String plot;
 
     @Column(name = "thumbnail", columnDefinition = "TEXT")
     private String thumbnail;
-
-    @Column(name = "platform_id")
-    private Integer platformId;
 
     @Column(name = "type", nullable = false)
     private Integer type;
 
     @Column(name = "runtime")
     private Integer runtime;
+
+    @Column(name = "tmdb_id", unique = true)
+    private Integer tmdbId;
 }
