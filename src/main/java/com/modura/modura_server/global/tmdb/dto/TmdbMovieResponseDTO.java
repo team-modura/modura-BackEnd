@@ -9,6 +9,7 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 public class TmdbMovieResponseDTO {
+
     private Integer page;
     private List<MovieResultDTO> results;
 
