@@ -12,6 +12,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
       - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      - TMDB_BEARER_TOKEN=${TMDB_BEARER_TOKEN}
   redis:
     restart: always
   nginx:
