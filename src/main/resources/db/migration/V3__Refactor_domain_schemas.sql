@@ -2,7 +2,7 @@
 ALTER TABLE `content`
     MODIFY COLUMN title_eng varchar(255) NULL,
     ADD COLUMN platform_id int NULL,
-    ADD COLUMN `type` int NOT NULL,
+    ADD COLUMN `type` int NOT NULL DEFAULT 1,
     ADD COLUMN runtime int NULL;
 
 -- 2. 'users' 테이블 스키마 변경
@@ -16,8 +16,8 @@ DROP FOREIGN KEY `FKmbcbqlq3e4w6aegphgtnet8yt`,
 
 ALTER TABLE `place`
     ADD COLUMN thumbnail text NULL,
-    ADD COLUMN latitude float NOT NULL,
-    ADD COLUMN longitude float NOT NULL;
+    ADD COLUMN latitude float NOT NULL DEFAULT 0.0,
+    ADD COLUMN longitude float NOT NULL DEFAULT 0.0;
 
 -- 4. 테이블 삭제
 DROP TABLE `content_platform`;
@@ -30,7 +30,7 @@ CREATE TABLE `stillcut` (
     `id` bigint NOT NULL AUTO_INCREMENT,
     `created_at` datetime(6) NOT NULL,
     `updated_at` datetime(6) NOT NULL,
-    `image_url` text NOT NULL,
+    `image_url` text,
     `content_id` bigint NOT NULL,
     `place_id` bigint NOT NULL,
     PRIMARY KEY (`id`),
