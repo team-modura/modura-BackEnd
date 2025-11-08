@@ -1,6 +1,5 @@
 package com.modura.modura_server.domain.place.entity;
 
-import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;

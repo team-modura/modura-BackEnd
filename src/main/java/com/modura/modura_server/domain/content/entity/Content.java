@@ -36,7 +36,7 @@ public class Content extends BaseEntity {
     @Column(name = "platform_id")
     private Integer platformId;
 
-    @Column(name = "thumbnail", nullable = false)
+    @Column(name = "type", nullable = false)
     private Integer type;
 
     @Column(name = "runtime")
