@@ -39,6 +39,6 @@ public class Content extends BaseEntity {
     @Column(name = "runtime")
     private Integer runtime;
 
-    @Column(name = "tmdb_id")
+    @Column(name = "tmdb_id", unique = true)
     private Integer tmdbId;
 }

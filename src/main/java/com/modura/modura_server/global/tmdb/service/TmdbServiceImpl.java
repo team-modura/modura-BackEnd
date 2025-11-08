@@ -15,6 +15,8 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -69,15 +71,36 @@ public class TmdbServiceImpl implements TmdbService {
                 .collectList();
 
         // 4. 최종 DB 저장 (blocking)
-        List<Content> contentList = contentListMono.block();
+        List<Content> fetchedContentList = contentListMono.block();
 
-        if (contentList == null || contentList.isEmpty()) {
+        if (fetchedContentList == null || fetchedContentList.isEmpty()) {
             log.warn("No valid movie results to save for page: {}", page);
             return;
         }
 
-        contentRepository.saveAll(contentList);
-        log.info("Successfully saved {} movies from page {}.", contentList.size(), page);
+        // 4-1. API 응답에서 tmdbId 목록 추출
+        Set<Integer> incomingTmdbIds = fetchedContentList.stream()
+                .map(Content::getTmdbId)
+                .collect(Collectors.toSet());
+
+        // 4-2. DB에서 이미 존재하는 tmdbId 목록 조회 (N+1 방지)
+        Set<Integer> existingTmdbIds = contentRepository.findAllByTmdbIdIn(incomingTmdbIds)
+                .stream()
+                .map(Content::getTmdbId)
+                .collect(Collectors.toSet());
+
+        // 4-3. API 응답 목록에서 DB에 없는 것만 필터링
+        List<Content> newContentList = fetchedContentList.stream()
+                .filter(content -> !existingTmdbIds.contains(content.getTmdbId()))
+                .collect(Collectors.toList());
+
+        // 4-4. 필터링된 새 컨텐츠만 저장
+        if (newContentList.isEmpty()) {
+            log.info("No new movies to save from page {}.", page);
+            return;
+        }
+
+        contentRepository.saveAll(newContentList);
     }
 
     private Mono<TmdbMovieDetailResponseDTO> fetchMovieDetails(int tmdbId) {
@@ -95,18 +118,6 @@ public class TmdbServiceImpl implements TmdbService {
                     log.warn("Failed to fetch details for tmdbId {}, skipping.", tmdbId, e);
                     return Mono.empty();
                 });
-    }
-
-    private Content transformToContent(TmdbMovieResponseDTO.MovieResultDTO dto) {
-
-        return Content.builder()
-                .titleKr(dto.getTitle())
-                .year(parseYearFromDate(dto.getReleaseDate()))
-                .plot(dto.getOverview())
-                .thumbnail(dto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + dto.getPosterPath() : null)
-                .type(1)
-                .tmdbId(dto.getId())
-                .build();
     }
 
     private Content transformToContent(TmdbMovieResponseDTO.MovieResultDTO listDto, TmdbMovieDetailResponseDTO detailDto) {

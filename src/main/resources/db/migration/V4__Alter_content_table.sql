@@ -6,9 +6,10 @@ ALTER TABLE `content`
 ALTER TABLE `content`
     ADD COLUMN `tmdb_id` int NULL;
 
--- 3. 'content' 테이블에서 'platform_id' 컬럼 삭제
+-- 3. 'content' 테이블 스키마 변경
 ALTER TABLE `content`
-DROP COLUMN `platform_id`;
+DROP COLUMN `platform_id`,
+     ADD CONSTRAINT `UK_CONTENT_TMDB_ID` UNIQUE (`tmdb_id`);
 
 -- 4. 'platform' 테이블 생성
 CREATE TABLE `platform` (
