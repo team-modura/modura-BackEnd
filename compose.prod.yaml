@@ -9,6 +9,9 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://${DB_URL}:3306/${DB_DATABASE}?serverTimezone=Asia/Seoul
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
   redis:
     restart: always
   nginx:
