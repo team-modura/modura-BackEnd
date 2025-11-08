@@ -26,10 +26,16 @@ public class UserCommandServiceImpl implements UserCommandService {
 
     @Override
     @Transactional
-    public Void updateUser(User user, UserRequestDTO.UpdateUserDTO request) {
+    public Void updateUser(Long userId, UserRequestDTO.UpdateUserDTO request) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        if (user.getAddress() != null) {
+            throw new BusinessException(ErrorStatus.ADDRESS_ALREADY_EXISTS);
+        }
 
         user.updateAddress(request.getAddress());
-        userRepository.save(user);
 
         if (request.getCategoryList() != null && !request.getCategoryList().isEmpty()) {
             List<UserCategory> newUserCategories = request.getCategoryList().stream()
@@ -45,7 +51,6 @@ public class UserCommandServiceImpl implements UserCommandService {
                     })
                     .collect(Collectors.toList());
 
-            // JpaRepository.saveAll()을 사용하여 배치 저장
             userCategoryRepository.saveAll(newUserCategories);
         }
 

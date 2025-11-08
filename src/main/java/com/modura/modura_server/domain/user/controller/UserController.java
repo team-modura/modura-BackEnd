@@ -28,8 +28,8 @@ public class UserController {
     public ApiResponse<Void> updateUser(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                               @Valid @RequestBody UserRequestDTO.UpdateUserDTO request) {
 
-        User user = userDetails.getUser();
-        Void response = userCommandService.updateUser(user, request);
+        Long userId = userDetails.getUser().getId();
+        Void response = userCommandService.updateUser(userId, request);
 
         return ApiResponse.onSuccess(response);
     }
