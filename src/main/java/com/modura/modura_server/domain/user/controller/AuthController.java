@@ -2,7 +2,7 @@ package com.modura.modura_server.domain.user.controller;
 
 import com.modura.modura_server.domain.user.dto.AuthRequestDTO;
 import com.modura.modura_server.domain.user.dto.AuthResponseDTO;
-import com.modura.modura_server.domain.user.service.UserCommandService;
+import com.modura.modura_server.domain.user.service.AuthCommandService;
 import com.modura.modura_server.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,13 +19,13 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 public class AuthController {
 
-    private final UserCommandService userCommandService;
+    private final AuthCommandService authCommandService;
 
     @Operation(summary = "회원가입(테스트용)")
     @PostMapping("/signup")
     public ApiResponse<AuthResponseDTO.GetUserDTO> createUser(@Valid @RequestBody AuthRequestDTO.CreateUserDTO request) {
 
-        AuthResponseDTO.GetUserDTO response = userCommandService.createUser(request);
+        AuthResponseDTO.GetUserDTO response = authCommandService.createUser(request);
 
         return ApiResponse.onSuccess(response);
     }
@@ -35,7 +35,7 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<AuthResponseDTO.GetUserDTO> kakaoLogin(@Valid @RequestBody AuthRequestDTO.KakaoLoginDTO request) {
 
-        AuthResponseDTO.GetUserDTO response = userCommandService.kakaoLogin(request);
+        AuthResponseDTO.GetUserDTO response = authCommandService.kakaoLogin(request);
 
         return ApiResponse.onSuccess(response);
     }
@@ -45,7 +45,7 @@ public class AuthController {
     @Profile({"dev"})
     public ApiResponse<AuthResponseDTO.GetUserDTO> testLogin(@Valid @RequestBody Long userId) {
 
-        AuthResponseDTO.GetUserDTO response = userCommandService.testLogin(userId);
+        AuthResponseDTO.GetUserDTO response = authCommandService.testLogin(userId);
 
         return ApiResponse.onSuccess(response);
     }
