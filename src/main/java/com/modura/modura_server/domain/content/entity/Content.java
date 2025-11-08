@@ -33,9 +33,6 @@ public class Content extends BaseEntity {
     @Column(name = "thumbnail", columnDefinition = "TEXT")
     private String thumbnail;
 
-    @Column(name = "platform_id")
-    private Integer platformId;
-
     @Column(name = "type", nullable = false)
     private Integer type;
 
