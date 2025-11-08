@@ -27,7 +27,7 @@ public class Content extends BaseEntity {
     @Column(name = "year")
     private Integer year;
 
-    @Column(name = "plot")
+    @Column(name = "plot", columnDefinition = "TEXT")
     private String plot;
 
     @Column(name = "thumbnail", columnDefinition = "TEXT")
@@ -41,4 +41,7 @@ public class Content extends BaseEntity {
 
     @Column(name = "runtime")
     private Integer runtime;
+
+    @Column(name = "tmdb_id")
+    private Integer tmdbId;
 }
