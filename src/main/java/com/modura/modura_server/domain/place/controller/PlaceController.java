@@ -31,7 +31,7 @@ public class PlaceController {
 
     @Operation(summary = "장소 찜 취소")
     @DeleteMapping("{placeId}/unlike")
-    public ApiResponse<Void> postUnlikePlace(
+    public ApiResponse<Void> deletelikePlace(
             @PathVariable(value="placeId") Long placeId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
