@@ -10,7 +10,6 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Setter
 @Table(name = "content_review")
 public class ContentReview extends BaseEntity {
 
@@ -26,9 +25,11 @@ public class ContentReview extends BaseEntity {
     @JoinColumn(name = "content_id", nullable = false)
     private Content content;
 
+    @Setter
     @Column(name = "body", nullable = false)
     private String body;
 
+    @Setter
     @Column(name = "rating", nullable = false)
     private Integer rating;
 }
