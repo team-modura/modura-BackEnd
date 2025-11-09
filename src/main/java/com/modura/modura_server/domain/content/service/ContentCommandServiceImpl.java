@@ -7,6 +7,7 @@ import com.modura.modura_server.domain.content.repository.ContentRepository;
 import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.global.exception.BusinessException;
 import com.modura.modura_server.global.response.code.status.ErrorStatus;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,22 +17,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class ContentCommandServiceImpl implements ContentCommandService {
     private final ContentRepository contentRepository;
     private final ContentLikesRepository contentLikesRepository;
+    private final EntityManager entityManager;
 
     @Override
     @Transactional
     public void like(Long contentId, Long userId) {
         if(contentLikesRepository.existsByUserIdAndContentId(userId, contentId)) {
             return;
-        } else {
-            Content content = contentRepository.findById(contentId)
-                    .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_NOT_FOUND));
-            contentLikesRepository.save(
-                    ContentLikes.builder()
-                            .content(content)
-                            .user(User.builder().id(userId).build())
-                            .build()
-            );
         }
+
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_NOT_FOUND));
+        User user = entityManager.getReference(User.class, userId);
+        contentLikesRepository.save(
+                ContentLikes.builder()
+                        .content(content)
+                        .user(user)
+                        .build()
+        );
     }
 
     @Override
@@ -39,8 +42,7 @@ public class ContentCommandServiceImpl implements ContentCommandService {
     public void unlike(Long contentId, Long userId) {
         if(!contentLikesRepository.existsByUserIdAndContentId(userId, contentId)) {
             return;
-        } else {
-            contentLikesRepository.deleteByUserIdAndContentId(userId, contentId);
         }
+        contentLikesRepository.deleteByUserIdAndContentId(userId, contentId);
     }
 }
