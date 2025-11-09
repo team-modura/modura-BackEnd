@@ -18,4 +18,16 @@ public class SearchResponseDTO {
         Boolean isLiked;
         String thumbnail;
     }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SearchPlaceDTO {
+
+        Long id;
+        String name;
+        Boolean isLiked;
+        String thumbnail;
+    }
 }
