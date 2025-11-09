@@ -9,19 +9,21 @@ import lombok.NoArgsConstructor;
 public class AuthRequestDTO {
 
     @Builder
+    @AllArgsConstructor
     @Getter
     @NoArgsConstructor
-    @AllArgsConstructor
     public static class CreateUserDTO {
+
         @NotBlank(message = "닉네임은 필수입니다.")
         String nickname;
     }
 
     @Builder
+    @AllArgsConstructor
     @Getter
     @NoArgsConstructor
-    @AllArgsConstructor
     public static class KakaoLoginDTO {
+
         @NotBlank
         String code;
     }

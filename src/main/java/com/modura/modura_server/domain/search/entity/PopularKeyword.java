@@ -1,4 +1,4 @@
-package com.modura.modura_server.domain.keyword.entity;
+package com.modura.modura_server.domain.search.entity;
 
 import com.modura.modura_server.global.entity.BaseEntity;
 import jakarta.persistence.*;

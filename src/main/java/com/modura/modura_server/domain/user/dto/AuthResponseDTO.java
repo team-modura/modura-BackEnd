@@ -13,6 +13,7 @@ public class AuthResponseDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class GetUserDTO {
+
         Long id;
         String accessToken;
         String refreshToken;
@@ -23,6 +24,7 @@ public class AuthResponseDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class GetKakaoTokenDTO {
+
         @JsonProperty("token_type")
         private String tokenType;
 
@@ -38,6 +40,7 @@ public class AuthResponseDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class GetKakaoUserInfoDTO {
+
         Long id;
 
         @JsonProperty("kakao_account")
