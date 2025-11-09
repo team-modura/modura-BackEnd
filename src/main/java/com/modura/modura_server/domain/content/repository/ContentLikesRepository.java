@@ -9,7 +9,9 @@ import java.util.List;
 import java.util.Set;
 
 public interface ContentLikesRepository extends JpaRepository<ContentLikes, Long> {
-
-    @Query("SELECT cl.content.id FROM ContentLikes cl WHERE cl.user.id = :userId AND cl.content.id IN :contentIds")
+    Boolean existsByUserIdAndContentId(Long userId, Long contentId);
+  
+  @Query("SELECT cl.content.id FROM ContentLikes cl WHERE cl.user.id = :userId AND cl.content.id IN :contentIds")
     Set<Long> findIdsByUserIdAndContentIds(@Param("userId") Long userId, @Param("contentIds") List<Long> contentIds);
+
 }
