@@ -72,12 +72,12 @@ public class ContentCommandServiceImpl implements ContentCommandService {
 
     @Override
     @Transactional
-    public void patchContentReview(Long contentId, Long ReviewId, Long userId, ContentRequestDTO.ReviewUpdateReqDTO reviewReqDTO) {
-                ContentReview review = contentReviewRepository.findById(ReviewId)
+    public void patchContentReview(Long contentId, Long reviewId, Long userId, ContentRequestDTO.ReviewUpdateReqDTO reviewReqDTO) {
+                ContentReview review = contentReviewRepository.findById(reviewId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_REVIEW_NOT_FOUND));
 
         if(!review.getUser().getId().equals(userId) || !review.getContent().getId().equals(contentId)) {
-            throw new BusinessException(ErrorStatus.CONTENT_REVIEW_NOT_FOUND);
+            throw new BusinessException(ErrorStatus.FORBIDDEN);
         }
 
         Integer newRating = reviewReqDTO.getRating();
@@ -104,7 +104,7 @@ public class ContentCommandServiceImpl implements ContentCommandService {
                 .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_REVIEW_NOT_FOUND));
 
         if(!review.getUser().getId().equals(userId) || !review.getContent().getId().equals(contentId)) {
-            throw new BusinessException(ErrorStatus.CONTENT_REVIEW_NOT_FOUND);
+            throw new BusinessException(ErrorStatus.FORBIDDEN);
         }
 
         contentReviewRepository.delete(review);
