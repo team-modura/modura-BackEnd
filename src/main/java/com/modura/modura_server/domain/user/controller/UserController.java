@@ -1,8 +1,6 @@
 package com.modura.modura_server.domain.user.controller;
 
-import com.modura.modura_server.domain.user.dto.AuthResponseDTO;
 import com.modura.modura_server.domain.user.dto.UserRequestDTO;
-import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.domain.user.service.UserCommandService;
 import com.modura.modura_server.global.response.ApiResponse;
 import com.modura.modura_server.global.security.CustomUserDetails;
