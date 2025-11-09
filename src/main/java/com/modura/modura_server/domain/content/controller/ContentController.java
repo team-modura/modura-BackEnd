@@ -94,4 +94,15 @@ public class ContentController {
         contentCommandService.patchContentReview(contentId, reviewId, userId, contentReviewReqDTO);
         return ApiResponse.onSuccess(null);
     }
+
+    @Operation(summary = "컨텐츠 리뷰 삭제")
+    @DeleteMapping("{contentId}/reviews/{reviewId}")
+    public ApiResponse<Void> deleteContentReview(
+            @PathVariable(value="contentId") Long contentId,
+            @PathVariable(value="reviewId") Long reviewId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long userId = userDetails.getUser().getId();
+        contentCommandService.deleteContentReview(contentId, reviewId, userId);
+        return ApiResponse.onSuccess(null);
+    }
 }

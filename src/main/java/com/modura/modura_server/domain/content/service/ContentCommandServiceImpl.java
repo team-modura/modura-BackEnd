@@ -93,4 +93,17 @@ public class ContentCommandServiceImpl implements ContentCommandService {
 
         contentReviewRepository.save(review);
     }
+
+    @Override
+    @Transactional
+    public void deleteContentReview(Long contentId, Long reviewId, Long userId) {
+        ContentReview review = contentReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_REVIEW_NOT_FOUND));
+
+        if(!review.getUser().getId().equals(userId) || !review.getContent().getId().equals(contentId)) {
+            throw new BusinessException(ErrorStatus.CONTENT_REVIEW_NOT_FOUND);
+        }
+
+        contentReviewRepository.delete(review);
+    }
 }
