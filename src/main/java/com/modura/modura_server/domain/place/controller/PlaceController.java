@@ -1,10 +1,14 @@
 package com.modura.modura_server.domain.place.controller;
 
+import com.modura.modura_server.domain.place.service.PlaceCommandService;
+import com.modura.modura_server.global.response.ApiResponse;
+import com.modura.modura_server.global.security.CustomUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -12,5 +16,27 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Place")
 @Validated
 public class PlaceController {
+    private final PlaceCommandService placeCommandService;
 
+    @Operation(summary = "장소 찜 하기")
+    @PostMapping("{placeId}/like")
+    public ApiResponse<Void> postLikePlace(
+            @PathVariable(value="placeId") Long placeId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+            ) {
+        Long userId = userDetails.getUser().getId();
+        placeCommandService.like(placeId,userId);
+        return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "장소 찜 취소")
+    @DeleteMapping("{placeId}/unlike")
+    public ApiResponse<Void> deletelikePlace(
+            @PathVariable(value="placeId") Long placeId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long userId = userDetails.getUser().getId();
+        placeCommandService.unlike(placeId,userId);
+        return ApiResponse.onSuccess(null);
+    }
 }
