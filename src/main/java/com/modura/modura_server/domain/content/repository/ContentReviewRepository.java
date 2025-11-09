@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ContentReviewRepository extends JpaRepository<ContentReview, Long> {
 
@@ -18,4 +19,6 @@ public interface ContentReviewRepository extends JpaRepository<ContentReview, Lo
 
     @Query("SELECT cr FROM ContentReview cr JOIN FETCH cr.user WHERE cr.content = :content")
     List<ContentReview> findByContent(@Param("content") Content content);
+
+    Optional<ContentReview> findByIdAndContent(Long reviewId, Content content);
 }

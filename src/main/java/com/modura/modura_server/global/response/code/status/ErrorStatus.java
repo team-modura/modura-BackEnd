@@ -27,6 +27,7 @@ public enum ErrorStatus implements BaseCode {
   
    // 컨텐츠 관련 에러
     CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTENT4001", "컨텐츠가 없습니다."),
+    CONTENT_REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTENT4002", "컨텐츠 리뷰가 없습니다.")
     ;
 
     private final HttpStatus httpStatus;
