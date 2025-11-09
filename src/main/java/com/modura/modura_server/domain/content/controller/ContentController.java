@@ -83,4 +83,15 @@ public class ContentController {
         return ApiResponse.onSuccess(null);
     }
 
+    @Operation(summary = "컨텐츠 리뷰 수정")
+    @PatchMapping("{contentId}/reviews/{reviewId}")
+    public ApiResponse<Void> patchContentReview(
+            @PathVariable(value="contentId") Long contentId,
+            @PathVariable(value="reviewId") Long reviewId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody ContentRequestDTO.ReviewUpdateReqDTO contentReviewReqDTO) {
+        Long userId = userDetails.getUser().getId();
+        contentCommandService.patchContentReview(contentId, reviewId, userId, contentReviewReqDTO);
+        return ApiResponse.onSuccess(null);
+    }
 }

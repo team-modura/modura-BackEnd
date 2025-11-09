@@ -7,4 +7,5 @@ public interface ContentCommandService {
     void like(Long contentId, Long userId);
     void unlike(Long contentId, Long userId);
     void postContentReview(Long contentId, Long userId, ContentRequestDTO.ReviewReqDTO reviewReqDTO);
+    void patchContentReview(Long contentId, Long userId, Long reviewId, ContentRequestDTO.ReviewUpdateReqDTO reviewReqDTO);
 }

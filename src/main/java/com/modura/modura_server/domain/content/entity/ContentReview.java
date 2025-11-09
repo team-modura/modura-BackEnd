@@ -10,6 +10,7 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
+@Setter
 @Table(name = "content_review")
 public class ContentReview extends BaseEntity {
 

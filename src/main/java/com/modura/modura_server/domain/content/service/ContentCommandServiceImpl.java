@@ -69,4 +69,28 @@ public class ContentCommandServiceImpl implements ContentCommandService {
                 .build();
         contentReviewRepository.save(review);
     }
+
+    @Override
+    @Transactional
+    public void patchContentReview(Long contentId, Long ReviewId, Long userId, ContentRequestDTO.ReviewUpdateReqDTO reviewReqDTO) {
+                ContentReview review = contentReviewRepository.findById(ReviewId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_REVIEW_NOT_FOUND));
+
+        if(!review.getUser().getId().equals(userId) || !review.getContent().getId().equals(contentId)) {
+            throw new BusinessException(ErrorStatus.CONTENT_REVIEW_NOT_FOUND);
+        }
+
+        Integer newRating = reviewReqDTO.getRating();
+        String newComment = reviewReqDTO.getComment();
+
+        if (newRating != null) {
+            review.setRating(newRating);
+        }
+
+        if (newComment != null) {
+            review.setBody(newComment);
+        }
+
+        contentReviewRepository.save(review);
+    }
 }
