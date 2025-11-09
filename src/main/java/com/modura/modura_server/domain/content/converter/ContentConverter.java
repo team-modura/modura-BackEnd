@@ -26,6 +26,7 @@ public class ContentConverter {
         List<ContentResponseDTO.ReviewItemDTO> reviewItemDTOS = reviews.stream()
                 .sorted(Comparator.comparing(ContentReview::getCreatedAt).reversed())
                 .limit(2)
+                .filter(review -> review.getUser() != null)
                 .map(review -> ContentResponseDTO.ReviewItemDTO.builder()
                         .id(review.getId())
                         .username(review.getUser().getNickname())
