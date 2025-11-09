@@ -7,4 +7,5 @@ import java.util.List;
 public interface SearchQueryService {
 
     List<SearchResponseDTO.SearchContentDTO> searchContent(Long userId, String query);
+    List<SearchResponseDTO.SearchPlaceDTO> searchPlace(Long userId, String query);
 }

@@ -33,4 +33,15 @@ public class SearchController {
 
         return ApiResponse.onSuccess(response);
     }
+
+    @Operation(summary = "장소 검색")
+    @GetMapping("/places")
+    public ApiResponse<List<SearchResponseDTO.SearchPlaceDTO>> searchPlace(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                               @RequestParam(name = "query") @NotBlank String query) {
+
+        Long userId = userDetails.getUser().getId();
+        List<SearchResponseDTO.SearchPlaceDTO> response = searchQueryService.searchPlace(userId, query);
+
+        return ApiResponse.onSuccess(response);
+    }
 }
