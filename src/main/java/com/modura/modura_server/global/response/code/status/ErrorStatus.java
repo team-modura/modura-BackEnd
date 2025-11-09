@@ -20,6 +20,9 @@ public enum ErrorStatus implements BaseCode {
     MEMBER_NOT_FOUND(HttpStatus.BAD_REQUEST, "MEMBER4001", "사용자가 없습니다."),
     NICKNAME_NOT_EXIST(HttpStatus.BAD_REQUEST, "MEMBER4002", "닉네임은 필수입니다."),
     TERMS_NOT_EXIST(HttpStatus.BAD_REQUEST, "MEMBER4003", "이용약관이 없습니다."),
+
+    // 컨텐츠 관련 에러
+    CONTENT_NOT_FOUND(HttpStatus.BAD_REQUEST, "CONTENT4001", "컨텐츠가 없습니다."),
     ;
 
     private final HttpStatus httpStatus;
