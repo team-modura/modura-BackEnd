@@ -16,5 +16,6 @@ public interface ContentReviewRepository extends JpaRepository<ContentReview, Lo
     @Query("SELECT COALESCE(ROUND(AVG(r.rating), 1), 0) FROM ContentReview r WHERE r.content.id = :contentId")
     Double findAverageRatingByContentId(@Param("contentId") Long contentId);
 
-    List<ContentReview> findByContent(Content content);
+    @Query("SELECT cr FROM ContentReview cr JOIN FETCH cr.user WHERE cr.content = :content")
+    List<ContentReview> findByContent(@Param("content") Content content);
 }
