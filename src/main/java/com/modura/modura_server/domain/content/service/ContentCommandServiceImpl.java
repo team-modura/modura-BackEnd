@@ -91,6 +91,9 @@ public class ContentCommandServiceImpl implements ContentCommandService {
             review.setBody(newComment);
         }
 
+        if (newRating == null && newComment == null) {
+            throw new BusinessException(ErrorStatus.BAD_REQUEST);
+        }
         contentReviewRepository.save(review);
     }
 
