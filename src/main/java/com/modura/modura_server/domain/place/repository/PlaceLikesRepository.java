@@ -10,6 +10,8 @@ import java.util.Set;
 
 public interface PlaceLikesRepository extends JpaRepository<PlaceLikes, Long> {
 
+    List<PlaceLikes> findByUserIdAndPlaceIdIn(Long userId, List<Long> placeIds);
+
     @Query("SELECT pl.place.id FROM PlaceLikes pl WHERE pl.user.id = :userId AND pl.place.id IN :placeIds")
     Set<Long> findIdsByUserIdAndPlaceIds(@Param("userId") Long userId, @Param("placeIds") List<Long> placeIds);
 }
