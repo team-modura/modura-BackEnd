@@ -6,6 +6,7 @@ import com.modura.modura_server.global.response.ApiResponse;
 import com.modura.modura_server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -25,7 +26,7 @@ public class SearchController {
     @Operation(summary = "컨텐츠 검색")
     @GetMapping("/contents")
     public ApiResponse<List<SearchResponseDTO.SearchContentDTO>> searchContent(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                        @RequestParam(name = "query") String query) {
+                                        @RequestParam(name = "query") @NotBlank String query) {
 
         Long userId = userDetails.getUser().getId();
         List<SearchResponseDTO.SearchContentDTO> response = searchQueryService.searchContent(userId, query);
