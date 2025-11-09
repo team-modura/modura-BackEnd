@@ -1,10 +1,14 @@
 package com.modura.modura_server.domain.content.service;
 
+import com.modura.modura_server.domain.content.dto.ContentRequestDTO;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.entity.ContentLikes;
+import com.modura.modura_server.domain.content.entity.ContentReview;
 import com.modura.modura_server.domain.content.repository.ContentLikesRepository;
 import com.modura.modura_server.domain.content.repository.ContentRepository;
+import com.modura.modura_server.domain.content.repository.ContentReviewRepository;
 import com.modura.modura_server.domain.user.entity.User;
+import com.modura.modura_server.domain.user.repository.UserRepository;
 import com.modura.modura_server.global.exception.BusinessException;
 import com.modura.modura_server.global.response.code.status.ErrorStatus;
 import jakarta.persistence.EntityManager;
@@ -18,6 +22,8 @@ public class ContentCommandServiceImpl implements ContentCommandService {
     private final ContentRepository contentRepository;
     private final ContentLikesRepository contentLikesRepository;
     private final EntityManager entityManager;
+    private final UserRepository userRepository;
+    private final ContentReviewRepository contentReviewRepository;
 
     @Override
     @Transactional
@@ -44,5 +50,23 @@ public class ContentCommandServiceImpl implements ContentCommandService {
             return;
         }
         contentLikesRepository.deleteByUserIdAndContentId(userId, contentId);
+    }
+
+    @Override
+    @Transactional
+    public void postContentReview(Long contentId, Long userId, ContentRequestDTO.ReviewReqDTO reviewReqDTO) {
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_NOT_FOUND));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        ContentReview review = ContentReview.builder()
+                .content(content)
+                .user(user)
+                .rating(reviewReqDTO.getRating())
+                .body(reviewReqDTO.getComment())
+                .build();
+        contentReviewRepository.save(review);
     }
 }

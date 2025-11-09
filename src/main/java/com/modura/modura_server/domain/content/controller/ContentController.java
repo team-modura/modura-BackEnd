@@ -1,5 +1,6 @@
 package com.modura.modura_server.domain.content.controller;
 
+import com.modura.modura_server.domain.content.dto.ContentRequestDTO;
 import com.modura.modura_server.domain.content.dto.ContentResponseDTO;
 import com.modura.modura_server.domain.content.repository.ContentLikesRepository;
 import com.modura.modura_server.domain.content.service.ContentCommandService;
@@ -8,6 +9,7 @@ import com.modura.modura_server.global.response.ApiResponse;
 import com.modura.modura_server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -69,4 +71,16 @@ public class ContentController {
         var dto = contentQueryService.getContentReviewItem(contentId, reviewId);
         return ApiResponse.onSuccess(dto);
     }
+
+    @Operation(summary = "컨텐츠 리뷰 작성")
+    @PostMapping("{contentId}/reviews")
+    public ApiResponse<Void> postContentReview(
+            @PathVariable(value="contentId") Long contentId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody ContentRequestDTO.ReviewReqDTO contentReviewReqDTO) {
+        Long userId = userDetails.getUser().getId();
+        contentCommandService.postContentReview(contentId, userId,contentReviewReqDTO);
+        return ApiResponse.onSuccess(null);
+    }
+
 }
