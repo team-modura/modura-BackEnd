@@ -19,6 +19,7 @@ import com.modura.modura_server.global.response.code.status.ErrorStatus;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -88,14 +89,22 @@ public class ContentQueryServiceImpl implements ContentQueryService {
                 .map(pl -> pl.getPlace().getId())
                 .collect(Collectors.toSet());
 
-        List<ContentResponseDTO.StillCutPlaceItemDTO> placeDtos = stillcuts.stream()
+        List<ContentResponseDTO.StillCutPlaceItemDTO> placeDtos =
+                stillcuts.stream()
+                        .collect(Collectors.toMap(
+                                sc -> sc.getPlace().getId(),
+                                sc -> sc,
+                                (existing, replacement) -> existing,
+                                LinkedHashMap::new
+                        ))
+                .values().stream()
                 .map(stillcut -> {
                     Place place = stillcut.getPlace();
                     Boolean isPlaceLiked = likedPlaceIdSet.contains(place.getId());
                     return ContentResponseDTO.StillCutPlaceItemDTO.builder()
-                            .id(stillcut.getId())
+                            .id(place.getId())
                             .name(place.getName())
-                            .thumbnail(place.getThumbnail())
+                            .thumbnail(stillcut.getImageUrl())
                             .isLiked(isPlaceLiked)
                             .build();
                 })
