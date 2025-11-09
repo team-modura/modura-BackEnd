@@ -4,6 +4,7 @@ import com.modura.modura_server.domain.content.dto.ContentResponseDTO;
 import com.modura.modura_server.domain.content.repository.ContentLikesRepository;
 import com.modura.modura_server.domain.content.service.ContentCommandService;
 import com.modura.modura_server.domain.content.service.ContentQueryService;
+import com.modura.modura_server.global.response.ApiResponse;
 import com.modura.modura_server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,33 +26,33 @@ public class ContentController {
 
     @Operation(summary = "컨텐츠 상세 조회")
     @GetMapping("/detail/{contentId}")
-    public ResponseEntity<ContentResponseDTO.ContentDetailDTO> getContentDetail(
+    public ApiResponse<ContentResponseDTO.ContentDetailDTO> getContentDetail(
             @PathVariable(value = "contentId") Long contentId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         Long userId = userDetails.getUser().getId();
         var dto = contentQueryService.getContentDetail(contentId,userId);
-        return ResponseEntity.ok(dto);
+        return ApiResponse.onSuccess(dto);
     }
 
     @Operation(summary = "컨텐츠 좋아요 하기")
     @PostMapping("{contentId}/like")
-    public ResponseEntity<?> postLikeContent(
+    public ApiResponse<Void> postLikeContent(
             @PathVariable(value="contentId") Long contentId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getUser().getId();
         contentCommandService.like(contentId,userId);
-        return ResponseEntity.ok().build();
+        return ApiResponse.onSuccess(null);
     }
 
     @Operation(summary = "컨텐츠 좋아요 취소")
     @DeleteMapping("{contentId}/like")
-    public ResponseEntity<?> deleteLikeContent(
+    public ApiResponse<Void> deleteLikeContent(
             @PathVariable(value="contentId") Long contentId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getUser().getId();
         contentCommandService.unlike(contentId,userId);
-        return ResponseEntity.ok().build();
+        return ApiResponse.onSuccess(null);
     }
 
 }
