@@ -23,6 +23,14 @@ public class ContentResponseDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    public static class ReviewListDTO {
+        private List<ReviewItemDTO> reviews;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class StillCutPlaceItemDTO {
         private Long id;
         private String name;

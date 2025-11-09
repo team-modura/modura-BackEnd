@@ -121,4 +121,32 @@ public class ContentQueryServiceImpl implements ContentQueryService {
                 placeDtos
         );
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ContentResponseDTO.ReviewListDTO getContentReviewList(Long contentId) {
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_NOT_FOUND));
+
+        List<ContentReview> reviews = Optional.ofNullable(
+                contentReviewRepository.findByContent(content)
+        ).orElse(List.of());
+        return ContentConverter.toContentReviewListDTO(
+                reviews
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ContentResponseDTO.ReviewItemDTO getContentReviewItem(Long contentId, Long reviewId) {
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_NOT_FOUND));
+
+        ContentReview review = contentReviewRepository.findByIdAndContent(reviewId, content)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_REVIEW_NOT_FOUND));
+
+        return ContentConverter.toContentReviewItemDTO(
+                review
+        );
+    }
 }

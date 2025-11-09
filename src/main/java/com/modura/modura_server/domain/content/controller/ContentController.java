@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 public class ContentController {
     private final ContentQueryService contentQueryService;
-    private final ContentLikesRepository contentLikesRepository;
     private final ContentCommandService contentCommandService;
 
     @Operation(summary = "컨텐츠 상세 조회")
@@ -54,4 +53,20 @@ public class ContentController {
         return ApiResponse.onSuccess(null);
     }
 
+    @Operation(summary = "컨텐츠 리뷰 전체 조회")
+    @GetMapping("{contentId}/reviews")
+    public ApiResponse<ContentResponseDTO.ReviewListDTO> getContentReviews(
+            @PathVariable(value="contentId") Long contentId) {
+        var dto = contentQueryService.getContentReviewList(contentId);
+        return ApiResponse.onSuccess(dto);
+    }
+
+    @Operation(summary = "컨텐츠 리뷰 조회")
+    @GetMapping("{contentId}/reviews/{reviewId}")
+    public ApiResponse<ContentResponseDTO.ReviewItemDTO> getContentReview(
+            @PathVariable(value="contentId") Long contentId,
+            @PathVariable(value="reviewId") Long reviewId) {
+        var dto = contentQueryService.getContentReviewItem(contentId, reviewId);
+        return ApiResponse.onSuccess(dto);
+    }
 }
