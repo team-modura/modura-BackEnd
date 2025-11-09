@@ -14,4 +14,5 @@ public interface ContentLikesRepository extends JpaRepository<ContentLikes, Long
   @Query("SELECT cl.content.id FROM ContentLikes cl WHERE cl.user.id = :userId AND cl.content.id IN :contentIds")
     Set<Long> findIdsByUserIdAndContentIds(@Param("userId") Long userId, @Param("contentIds") List<Long> contentIds);
 
+  void deleteByUserIdAndContentId(Long userId, Long contentId);
 }
