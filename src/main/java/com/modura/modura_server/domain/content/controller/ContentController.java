@@ -74,7 +74,7 @@ public class ContentController {
 
     @Operation(summary = "컨텐츠 리뷰 작성")
     @PostMapping("{contentId}/reviews")
-    public ApiResponse<Void> postCententReview(
+    public ApiResponse<Void> postContentReview(
             @PathVariable(value="contentId") Long contentId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ContentRequestDTO.ReviewReqDTO contentReviewReqDTO) {
