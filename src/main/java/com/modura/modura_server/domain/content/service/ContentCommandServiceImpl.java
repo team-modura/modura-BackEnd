@@ -69,4 +69,44 @@ public class ContentCommandServiceImpl implements ContentCommandService {
                 .build();
         contentReviewRepository.save(review);
     }
+
+    @Override
+    @Transactional
+    public void patchContentReview(Long contentId, Long reviewId, Long userId, ContentRequestDTO.ReviewUpdateReqDTO reviewReqDTO) {
+                ContentReview review = contentReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_REVIEW_NOT_FOUND));
+
+        if(!review.getUser().getId().equals(userId) || !review.getContent().getId().equals(contentId)) {
+            throw new BusinessException(ErrorStatus.FORBIDDEN);
+        }
+
+        Integer newRating = reviewReqDTO.getRating();
+        String newComment = reviewReqDTO.getComment();
+
+        if (newRating != null) {
+            review.setRating(newRating);
+        }
+
+        if (newComment != null) {
+            review.setBody(newComment);
+        }
+
+        if (newRating == null && newComment == null) {
+            throw new BusinessException(ErrorStatus.BAD_REQUEST);
+        }
+        contentReviewRepository.save(review);
+    }
+
+    @Override
+    @Transactional
+    public void deleteContentReview(Long contentId, Long reviewId, Long userId) {
+        ContentReview review = contentReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_REVIEW_NOT_FOUND));
+
+        if(!review.getUser().getId().equals(userId) || !review.getContent().getId().equals(contentId)) {
+            throw new BusinessException(ErrorStatus.FORBIDDEN);
+        }
+
+        contentReviewRepository.delete(review);
+    }
 }

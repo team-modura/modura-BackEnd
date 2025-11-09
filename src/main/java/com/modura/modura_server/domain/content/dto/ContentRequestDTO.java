@@ -21,4 +21,11 @@ public class ContentRequestDTO {
         @NotBlank
         private String comment;
     }
+
+    @Getter @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class ReviewUpdateReqDTO {
+        @Min(1) @Max(5)
+        private Integer rating;
+        private String comment;
+    }
 }
