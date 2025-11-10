@@ -39,7 +39,7 @@ public class UserController {
     }
 
     @Operation(summary = "찜한 컨텐츠 조회")
-    @GetMapping("likes/contents")
+    @GetMapping("/likes/contents")
     public ApiResponse<SearchResponseDTO.SearchContentListDTO> getLikedContent(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                                               @RequestParam(name = "type") @NotBlank String type) {
 
