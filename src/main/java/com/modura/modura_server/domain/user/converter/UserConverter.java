@@ -9,13 +9,13 @@ import java.util.stream.Collectors;
 
 public class UserConverter {
 
-    public static SearchResponseDTO.SearchContentListDTO toGetLikedContentListDTO(List<Content> contentList, boolean isLiked){
+    public static SearchResponseDTO.SearchContentListDTO toGetLikedContentListDTO(List<Content> contentList){
 
         List<SearchResponseDTO.SearchContentDTO> contentDTOList = contentList.stream()
                 .map(content -> SearchResponseDTO.SearchContentDTO.builder()
                         .id(content.getId())
                         .title(content.getTitleKr())
-                        .isLiked(isLiked)
+                        .isLiked(true)
                         .thumbnail(content.getThumbnail())
                         .build())
                 .collect(Collectors.toList());

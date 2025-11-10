@@ -43,4 +43,18 @@ public class SearchConverter {
                 .contentList(contentDTOList)
                 .build();
     }
+
+    public static SearchResponseDTO.SearchPlaceListDTO toSearchPlaceListDTO(List<Place> placeList, Set<Long> likedPlaceIds){
+
+        List<SearchResponseDTO.SearchPlaceDTO> placeDTOList = placeList.stream()
+                .map(place -> {
+                    boolean isLiked = likedPlaceIds.contains(place.getId());
+                    return toSearchPlaceDTO(place, isLiked);
+                })
+                .collect(Collectors.toList());
+
+        return SearchResponseDTO.SearchPlaceListDTO.builder()
+                .placeList(placeDTOList)
+                .build();
+    }
 }

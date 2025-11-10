@@ -40,7 +40,7 @@ public class UserQueryServiceImpl implements UserQueryService {
 
         List<Content> likedContents = contentRepository.findLikedContentsByUserAndType(userId, contentType);
 
-        return UserConverter.toGetLikedContentListDTO(likedContents, true);
+        return UserConverter.toGetLikedContentListDTO(likedContents);
     }
 
     @Override
