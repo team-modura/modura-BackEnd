@@ -25,3 +25,9 @@ tmdb:
   api:
     base-url: https://api.themoviedb.org/3
     bearer-token: YOUR_TMDB_BEARER_TOKEN
+
+cloud:
+  aws:
+    credentials:
+      access-key: YOUR_ACCESS_KEY
+      secret-key: YOUR_SECRET_KEY
