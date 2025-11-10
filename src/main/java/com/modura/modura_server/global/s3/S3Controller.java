@@ -22,7 +22,7 @@ public class S3Controller {
      * 프론트에서 파일 업로드 전에 요청
      */
     @Operation(summary = "업로드용 Presigned URL 발급")
-    @GetMapping("/presigned-upload")
+    @PostMapping("/presigned-upload")
     public ApiResponse<List<S3ResponseDTO.PresignedUrlResDTO>> getPresignedUploadUrl(
             @RequestBody S3RequestDTO.PresignedUploadReqDTO req
     ) {
