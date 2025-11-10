@@ -5,6 +5,7 @@ import com.modura.modura_server.domain.place.entity.Place;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SearchConverter {
@@ -29,15 +30,13 @@ public class SearchConverter {
                 .build();
     }
 
-    public static SearchResponseDTO.SearchContentListDTO toSearchContentListDTO(List<Content> contentList, boolean isLiked){
+    public static SearchResponseDTO.SearchContentListDTO toSearchContentListDTO(List<Content> contentList, Set<Long> likedContentIds){
 
         List<SearchResponseDTO.SearchContentDTO> contentDTOList = contentList.stream()
-                .map(content -> SearchResponseDTO.SearchContentDTO.builder()
-                        .id(content.getId())
-                        .title(content.getTitleKr())
-                        .isLiked(isLiked)
-                        .thumbnail(content.getThumbnail())
-                        .build())
+                .map(content -> {
+                    boolean isLiked = likedContentIds.contains(content.getId());
+                    return toSearchContentDTO(content, isLiked);
+                })
                 .collect(Collectors.toList());
 
         return SearchResponseDTO.SearchContentListDTO.builder()

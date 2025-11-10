@@ -29,12 +29,14 @@ public class SearchQueryServiceImpl implements SearchQueryService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SearchResponseDTO.SearchContentDTO> searchContent(Long userId, String query) {
+    public SearchResponseDTO.SearchContentListDTO searchContent(Long userId, String query) {
 
         List<Content> contents = contentRepository.searchByTitleContaining(query);
 
         if (contents.isEmpty()) {
-            return Collections.emptyList();
+            return SearchResponseDTO.SearchContentListDTO.builder()
+                    .contentList(Collections.emptyList())
+                    .build();
         }
 
         List<Long> contentIds = contents.stream()
@@ -44,12 +46,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
         Set<Long> likedContentIds = contentLikesRepository.findIdsByUserIdAndContentIds(userId, contentIds);
 
-        return contents.stream()
-                .map(content -> {
-                    boolean isLiked = likedContentIds.contains(content.getId());
-                    return SearchConverter.toSearchContentDTO(content, isLiked);
-                })
-                .collect(Collectors.toList());
+        return SearchConverter.toSearchContentListDTO(contents, likedContentIds);
     }
 
     @Override

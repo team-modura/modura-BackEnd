@@ -2,8 +2,8 @@ package com.modura.modura_server.domain.user.service;
 
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.repository.ContentRepository;
-import com.modura.modura_server.domain.search.converter.SearchConverter;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
+import com.modura.modura_server.domain.user.converter.UserConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +37,6 @@ public class UserQueryServiceImpl implements UserQueryService {
 
         List<Content> likedContents = contentRepository.findLikedContentsByUserAndType(userId, contentType);
 
-        return SearchConverter.toSearchContentListDTO(likedContents, true);
+        return UserConverter.toGetLikedContentListDTO(likedContents, true);
     }
 }
