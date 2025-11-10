@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -51,14 +50,16 @@ public class SearchQueryServiceImpl implements SearchQueryService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SearchResponseDTO.SearchPlaceDTO> searchPlace(Long userId, String query) {
+    public SearchResponseDTO.SearchPlaceListDTO searchPlace(Long userId, String query) {
 
         List<Place> placesByName = placeRepository.searchByNameContaining(query);
         List<Place> placesByContent = findPlacesByContentTitle(query);
         List<Place> combinedPlaces = combinePlaces(placesByName, placesByContent);
 
         if (combinedPlaces.isEmpty()) {
-            return Collections.emptyList();
+            return SearchResponseDTO.SearchPlaceListDTO.builder()
+                    .placeList(Collections.emptyList())
+                    .build();
         }
 
         List<Long> placeIds = combinedPlaces.stream()
@@ -68,12 +69,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
         Set<Long> likedPlaceIds = placeLikesRepository.findIdsByUserIdAndPlaceIds(userId, placeIds);
 
-        return combinedPlaces.stream()
-                .map(place -> {
-                    boolean isLiked = likedPlaceIds.contains(place.getId());
-                    return SearchConverter.toSearchPlaceDTO(place, isLiked);
-                })
-                .collect(Collectors.toList());
+        return SearchConverter.toSearchPlaceListDTO(combinedPlaces, likedPlaceIds);
     }
 
     private List<Place> findPlacesByContentTitle(String query) {

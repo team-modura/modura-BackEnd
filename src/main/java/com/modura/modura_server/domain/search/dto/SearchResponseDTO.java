@@ -41,4 +41,13 @@ public class SearchResponseDTO {
         Boolean isLiked;
         String thumbnail;
     }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SearchPlaceListDTO {
+
+        List<SearchPlaceDTO> placeList;
+    }
 }
