@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -28,8 +29,8 @@ public class S3Controller {
     ) {
         List<S3ResponseDTO.PresignedUrlResDTO> result = new ArrayList<>();
         for (int i = 0; i < req.getFileNames().size(); i++) {
-            String key = req.getFolder() + "/" + req.getFileNames().get(i);
-            String url = s3Service.generateUploadPresignedUrl(req.getFolder(), req.getFileNames().get(i), req.getContentTypes().get(i));
+            String key = req.getFolder() + "/" + UUID.randomUUID() + "-" + req.getFileNames().get(i);
+            String url = s3Service.generateUploadPresignedUrlWithKey(key, req.getContentTypes().get(i));
             result.add(new S3ResponseDTO.PresignedUrlResDTO(key, url));
         }
         return ApiResponse.onSuccess(result);

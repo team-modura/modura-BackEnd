@@ -24,10 +24,7 @@ public class S3Service {
 
 
     //  S3에 이미지 업로드용 Presigned URL 발급 (PUT 방식)
-    public String generateUploadPresignedUrl(String folder, String originalFileName,String contentType) {
-        // 고유한 파일 경로 생성
-        String key = folder + "/" + UUID.randomUUID() + "-" + originalFileName;
-
+    public String generateUploadPresignedUrlWithKey(String key, String contentType) {
         // S3에 업로드할 파일 요청 정보
         PutObjectRequest objectRequest = PutObjectRequest.builder()
                 .bucket(bucket)
