@@ -15,4 +15,9 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
     @Query("SELECT c FROM Content c WHERE c.titleKr LIKE CONCAT('%', :query, '%') " +
             "OR LOWER(c.titleEng) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<Content> searchByTitleContaining(@Param("query") String query);
+
+    @Query("SELECT c FROM Content c " +
+            "JOIN ContentLikes cl ON c.id = cl.content.id " +
+            "WHERE cl.user.id = :userId AND c.type = :contentType")
+    List<Content> findLikedContentsByUserAndType(@Param("userId") Long userId, @Param("contentType") Integer contentType);
 }

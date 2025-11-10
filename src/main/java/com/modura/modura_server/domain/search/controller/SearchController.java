@@ -25,11 +25,11 @@ public class SearchController {
 
     @Operation(summary = "컨텐츠 검색")
     @GetMapping("/contents")
-    public ApiResponse<List<SearchResponseDTO.SearchContentDTO>> searchContent(@AuthenticationPrincipal CustomUserDetails userDetails,
+    public ApiResponse<SearchResponseDTO.SearchContentListDTO> searchContent(@AuthenticationPrincipal CustomUserDetails userDetails,
                                         @RequestParam(name = "query") @NotBlank String query) {
 
         Long userId = userDetails.getUser().getId();
-        List<SearchResponseDTO.SearchContentDTO> response = searchQueryService.searchContent(userId, query);
+        SearchResponseDTO.SearchContentListDTO response = searchQueryService.searchContent(userId, query);
 
         return ApiResponse.onSuccess(response);
     }
