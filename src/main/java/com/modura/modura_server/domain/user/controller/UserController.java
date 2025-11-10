@@ -48,4 +48,14 @@ public class UserController {
 
         return ApiResponse.onSuccess(response);
     }
+
+    @Operation(summary = "찜한 촬영지 조회")
+    @GetMapping("/likes/places")
+    public ApiResponse<SearchResponseDTO.SearchPlaceListDTO> getLikedPlace(@AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        SearchResponseDTO.SearchPlaceListDTO response = userQueryService.getLikedPlace(userId);
+
+        return ApiResponse.onSuccess(response);
+    }
 }

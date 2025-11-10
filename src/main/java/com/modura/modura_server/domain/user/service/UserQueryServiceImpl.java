@@ -2,6 +2,8 @@ package com.modura.modura_server.domain.user.service;
 
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.repository.ContentRepository;
+import com.modura.modura_server.domain.place.entity.Place;
+import com.modura.modura_server.domain.place.repository.PlaceRepository;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 import com.modura.modura_server.domain.user.converter.UserConverter;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import java.util.Map;
 public class UserQueryServiceImpl implements UserQueryService {
 
     private final ContentRepository contentRepository;
+    private final PlaceRepository placeRepository;
 
     private static final Map<String, Integer> CONTENT_TYPE_MAP = Map.of(
             "series", 1,
@@ -38,5 +41,14 @@ public class UserQueryServiceImpl implements UserQueryService {
         List<Content> likedContents = contentRepository.findLikedContentsByUserAndType(userId, contentType);
 
         return UserConverter.toGetLikedContentListDTO(likedContents, true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SearchResponseDTO.SearchPlaceListDTO getLikedPlace(Long userId) {
+
+        List<Place> likedPlaces = placeRepository.findLikedPlacesByUser(userId);
+
+        return UserConverter.toGetLikedPlaceListDTO(likedPlaces);
     }
 }
