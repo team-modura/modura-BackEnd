@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 public class SearchResponseDTO {
 
     @Builder
@@ -17,6 +19,15 @@ public class SearchResponseDTO {
         String title;
         Boolean isLiked;
         String thumbnail;
+    }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SearchContentListDTO {
+
+        List<SearchContentDTO> contentList;
     }
 
     @Builder
