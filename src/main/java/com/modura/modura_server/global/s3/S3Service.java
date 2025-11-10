@@ -11,6 +11,8 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.*;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -25,7 +27,32 @@ public class S3Service {
 
 
     //  S3에 이미지 업로드용 Presigned URL 발급 (PUT 방식)
-    public String generateUploadPresignedUrlWithKey(String key, String contentType) {
+    public List<S3ResponseDTO.PresignedUrlResDTO> generateUploadPresignedUrl(S3RequestDTO.PresignedUploadReqDTO req) {
+
+        if (req.getFileNames().size() != req.getContentTypes().size()) {
+            throw new IllegalArgumentException("fileNames와 contentTypes의 크기가 일치하지 않습니다");
+        }
+
+        List<S3ResponseDTO.PresignedUrlResDTO> resultList = new ArrayList<>();
+
+        for (int i = 0; i < req.getFileNames().size(); i++) {
+            S3ResponseDTO.PresignedUrlResDTO presignedUrlDTO = generateSingleUploadPresignedUrl(
+                    req.getFolder(),
+                    req.getFileNames().get(i),
+                    req.getContentTypes().get(i)
+            );
+
+            resultList.add(presignedUrlDTO);
+        }
+
+        return resultList;
+    }
+
+    private S3ResponseDTO.PresignedUrlResDTO generateSingleUploadPresignedUrl(String folder, String originalFileName, String contentType) {
+
+        // 고유한 파일 경로 생성
+        String key = folder + "/" + UUID.randomUUID() + "-" + originalFileName;
+
         // S3에 업로드할 파일 요청 정보
         PutObjectRequest objectRequest = PutObjectRequest.builder()
                 .bucket(bucket)
@@ -39,9 +66,8 @@ public class S3Service {
                         .signatureDuration(Duration.ofMinutes(5))
         );
 
-        return presignedRequest.url().toString(); // 프론트가 이 URL로 업로드하게 됨
+        return new S3ResponseDTO.PresignedUrlResDTO(key, presignedRequest.url().toString());
     }
-
 
     // S3에 있는 이미지 조회용 Presigned URL 발급 (GET 방식)
     public String generateViewPresignedUrl(String key) {

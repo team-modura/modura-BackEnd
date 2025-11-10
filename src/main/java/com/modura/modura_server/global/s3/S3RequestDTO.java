@@ -1,7 +1,7 @@
 package com.modura.modura_server.global.s3;
 
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,10 +15,13 @@ public class S3RequestDTO {
     @Getter
     @NoArgsConstructor
     public static class PresignedUploadReqDTO {
-        @NotNull
+
+        @NotBlank(message = "폴더명은 필수입니다.")
         private String folder;
+
         @NotEmpty
         private List<String> fileNames;
+
         @NotEmpty
         private List<String> contentTypes;
     }
