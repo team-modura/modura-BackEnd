@@ -1,8 +1,10 @@
 package com.modura.modura_server.domain.user.converter;
 
 import com.modura.modura_server.domain.content.entity.Content;
+import com.modura.modura_server.domain.place.dto.PlaceResponseDTO;
 import com.modura.modura_server.domain.place.entity.Place;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
+import com.modura.modura_server.domain.user.entity.Stillcut;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,6 +40,26 @@ public class UserConverter {
 
         return SearchResponseDTO.SearchPlaceListDTO.builder()
                 .placeList(placeDTOList)
+                .build();
+    }
+
+    public static PlaceResponseDTO.GetStillcutListDTO toGetStillcutListDTO(List<Stillcut> stillcutList){
+
+        List<PlaceResponseDTO.GetStillcutDTO> stillcutDTOList = stillcutList.stream()
+                .map(stillcut -> {
+                    Content content = stillcut.getContent();
+
+                    return PlaceResponseDTO.GetStillcutDTO.builder()
+                            .stillcutId(stillcut.getId())
+                            .contentId(stillcut.getContent().getId())
+                            .title(stillcut.getContent().getTitleKr())
+                            .imageUrl(stillcut.getImageUrl())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return PlaceResponseDTO.GetStillcutListDTO.builder()
+                .stillcutList(stillcutDTOList)
                 .build();
     }
 }
