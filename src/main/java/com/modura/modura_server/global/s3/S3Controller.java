@@ -7,9 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -26,20 +24,10 @@ public class S3Controller {
     @Operation(summary = "업로드용 Presigned URL 발급")
     @PostMapping("/presigned-upload")
     public ApiResponse<List<S3ResponseDTO.PresignedUrlResDTO>> getPresignedUploadUrl(
-            @RequestBody @Valid S3RequestDTO.PresignedUploadReqDTO req
+            @Valid @RequestBody S3RequestDTO.PresignedUploadReqDTO req
     ) {
-
-        if (req.getFileNames().size() != req.getContentTypes().size()) {
-           throw new IllegalArgumentException("fileNames와 contentTypes의 크기가 일치하지 않습니다");
-        }
-
-        List<S3ResponseDTO.PresignedUrlResDTO> result = new ArrayList<>();
-        for (int i = 0; i < req.getFileNames().size(); i++) {
-            String key = req.getFolder() + "/" + UUID.randomUUID() + "-" + req.getFileNames().get(i);
-            String url = s3Service.generateUploadPresignedUrlWithKey(key, req.getContentTypes().get(i));
-            result.add(new S3ResponseDTO.PresignedUrlResDTO(key, url));
-        }
-        return ApiResponse.onSuccess(result);
+        List<S3ResponseDTO.PresignedUrlResDTO> response = s3Service.generateUploadPresignedUrl(req);
+        return ApiResponse.onSuccess(response);
     }
 
 
