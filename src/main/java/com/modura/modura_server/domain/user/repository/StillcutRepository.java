@@ -14,4 +14,7 @@ public interface StillcutRepository extends JpaRepository<Stillcut, Long> {
 
     @Query("SELECT s FROM Stillcut s JOIN FETCH s.place WHERE s.content IN :contents")
     List<Stillcut> findWithPlaceByContentIn(@Param("contents") List<Content> contents);
+
+    @Query("SELECT s FROM Stillcut s JOIN FETCH s.content c WHERE s.place.id = :placeId")
+    List<Stillcut> findByPlaceIdWithContent(@Param("placeId") Long placeId);
 }

@@ -1,6 +1,8 @@
 package com.modura.modura_server.domain.place.controller;
 
+import com.modura.modura_server.domain.place.dto.PlaceResponseDTO;
 import com.modura.modura_server.domain.place.service.PlaceCommandService;
+import com.modura.modura_server.domain.place.service.PlaceQueryService;
 import com.modura.modura_server.global.response.ApiResponse;
 import com.modura.modura_server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,7 +18,9 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Place")
 @Validated
 public class PlaceController {
+
     private final PlaceCommandService placeCommandService;
+    private final PlaceQueryService placeQueryService;
 
     @Operation(summary = "장소 찜 하기")
     @PostMapping("{placeId}/like")
@@ -38,5 +42,14 @@ public class PlaceController {
         Long userId = userDetails.getUser().getId();
         placeCommandService.unlike(placeId,userId);
         return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "촬영지 스틸컷 조회")
+    @GetMapping("/{placeId}/stillcuts")
+    public ApiResponse<PlaceResponseDTO.GetStillcutListDTO> getStillcut(@PathVariable Long placeId) {
+
+        PlaceResponseDTO.GetStillcutListDTO response = placeQueryService.getStillcut(placeId);
+
+        return ApiResponse.onSuccess(response);
     }
 }
