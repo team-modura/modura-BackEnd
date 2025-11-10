@@ -18,6 +18,7 @@ import java.util.UUID;
 public class S3Service {
 
     private final S3Presigner s3Presigner;
+    private final S3Client s3Client;
 
     @Value("${cloud.aws.s3.bucket}")
     private String bucket;
@@ -66,12 +67,7 @@ public class S3Service {
     public void deleteFile(String imageUrl) {
         String key = extractKeyFromUrl(imageUrl);
 
-        S3Client s3 = S3Client.builder()
-                .region(Region.AP_NORTHEAST_2)
-                .credentialsProvider(DefaultCredentialsProvider.create())
-                .build();
-
-        s3.deleteObject(DeleteObjectRequest.builder()
+        s3Client.deleteObject(DeleteObjectRequest.builder()
                 .bucket(bucket)
                 .key(key)
                 .build());
@@ -82,7 +78,19 @@ public class S3Service {
      * ex: https://bucket.s3.amazonaws.com/folder/abc.jpg → folder/abc.jpg
      */
     private String extractKeyFromUrl(String url) {
-        int idx = url.indexOf(".amazonaws.com/") + ".amazonaws.com/".length();
-        return url.substring(idx);
+        try {
+            int idx = url.indexOf(".amazonaws.com/");
+            if (idx == -1) {
+                throw new IllegalArgumentException("유효하지 않은 S3 URL입니다.");
+            }
+            String key = url.substring(idx + ".amazonaws.com/".length());
+
+            if (key.startsWith(bucket + "/")) {
+                key = key.substring((bucket.length() + 1));
+        }
+            return key;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("S3 URL에서 Key를 추출하는 중 오류가 발생했습니다.", e);
+        }
     }
 }

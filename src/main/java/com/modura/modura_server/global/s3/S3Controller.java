@@ -3,6 +3,7 @@ package com.modura.modura_server.global.s3;
 import com.modura.modura_server.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,8 +26,13 @@ public class S3Controller {
     @Operation(summary = "업로드용 Presigned URL 발급")
     @PostMapping("/presigned-upload")
     public ApiResponse<List<S3ResponseDTO.PresignedUrlResDTO>> getPresignedUploadUrl(
-            @RequestBody S3RequestDTO.PresignedUploadReqDTO req
+            @RequestBody @Valid S3RequestDTO.PresignedUploadReqDTO req
     ) {
+
+        if (req.getFileNames().size() != req.getContentTypes().size()) {
+           throw new IllegalArgumentException("fileNames와 contentTypes의 크기가 일치하지 않습니다");
+        }
+
         List<S3ResponseDTO.PresignedUrlResDTO> result = new ArrayList<>();
         for (int i = 0; i < req.getFileNames().size(); i++) {
             String key = req.getFolder() + "/" + UUID.randomUUID() + "-" + req.getFileNames().get(i);
