@@ -25,6 +25,6 @@ public class AuthRequestDTO {
     public static class KakaoLoginDTO {
 
         @NotBlank
-        String code;
+        String accessToken;
     }
 }

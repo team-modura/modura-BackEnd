@@ -31,7 +31,7 @@ public class AuthController {
     }
 
     @Operation(summary = "인가 코드로 카카오 로그인",
-            description = "https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${REST_API_KEY}&redirect_uri=http://localhost:8080/redirect")
+            description = "https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=&redirect_uri=")
     @PostMapping("/login")
     public ApiResponse<AuthResponseDTO.GetUserDTO> kakaoLogin(@Valid @RequestBody AuthRequestDTO.KakaoLoginDTO request) {
 

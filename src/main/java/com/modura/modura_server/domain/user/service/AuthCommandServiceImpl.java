@@ -61,8 +61,8 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     @Transactional
     public AuthResponseDTO.GetUserDTO kakaoLogin(AuthRequestDTO.KakaoLoginDTO request) {
 
-        AuthResponseDTO.GetKakaoTokenDTO kakaoToken = getKakaoToken(request.getCode());
-        AuthResponseDTO.GetKakaoUserInfoDTO userInfo = getKakaoUserInfo(kakaoToken.getAccessToken());
+//        AuthResponseDTO.GetKakaoTokenDTO kakaoToken = getKakaoToken(request.getCode());
+        AuthResponseDTO.GetKakaoUserInfoDTO userInfo = getKakaoUserInfo(request.getAccessToken());
 
         String nickname =
                 userInfo.getKakaoAccount() != null
@@ -99,7 +99,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         return AuthConverter.toGetUserDTO(user, accessToken, refreshToken);
     }
 
-    private AuthResponseDTO.GetKakaoTokenDTO getKakaoToken(String code) {
+/*    private AuthResponseDTO.GetKakaoTokenDTO getKakaoToken(String code) {
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "authorization_code");
@@ -114,7 +114,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
                 .retrieve()
                 .bodyToMono(AuthResponseDTO.GetKakaoTokenDTO.class)
                 .block(Duration.ofSeconds(10));
-    }
+    }*/
 
     private AuthResponseDTO.GetKakaoUserInfoDTO getKakaoUserInfo(String accessToken) {
 
