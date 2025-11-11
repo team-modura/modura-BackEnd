@@ -8,5 +8,5 @@ import java.util.Optional;
 
 public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> {
     List<PlaceReview> findByPlaceId(Long placeId);
-    Optional<PlaceReview> findByIdAndPlaceId(Long placereviewId, Long placeId);
+    Optional<PlaceReview> findByIdAndPlaceId(Long placeReviewId, Long placeId);
 }
