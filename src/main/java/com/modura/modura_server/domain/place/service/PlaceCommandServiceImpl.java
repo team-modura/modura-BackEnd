@@ -109,12 +109,14 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                 .build();
         placeReviewRepository.save(placeReview);
 
-        for (String imageUrl : request.getImageUrl()) {
-            ReviewImage reviewImage = ReviewImage.builder()
-                    .placeReview(placeReview)
-                    .imageUrl(imageUrl)
-                    .build();
-            reviewImageRepository.save(reviewImage);
+        if (request.getImageUrl() != null) {
+            for (String imageUrl : request.getImageUrl()) {
+                ReviewImage reviewImage = ReviewImage.builder()
+                   .placeReview(placeReview)
+                   .imageUrl(imageUrl)
+                   .build();
+                reviewImageRepository.save(reviewImage);
+            }
         }
     }
 }
