@@ -4,7 +4,6 @@ import com.modura.modura_server.domain.place.dto.PlaceRequestDTO;
 import com.modura.modura_server.domain.place.dto.PlaceResponseDTO;
 import com.modura.modura_server.domain.place.service.PlaceCommandService;
 import com.modura.modura_server.domain.place.service.PlaceQueryService;
-import com.modura.modura_server.domain.user.dto.UserRequestDTO;
 import com.modura.modura_server.global.response.ApiResponse;
 import com.modura.modura_server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
