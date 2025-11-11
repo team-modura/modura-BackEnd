@@ -55,6 +55,5 @@ public class UserCommandServiceImpl implements UserCommandService {
 
             userCategoryRepository.saveAll(newUserCategories);
         }
-        return null;
     }
 }
