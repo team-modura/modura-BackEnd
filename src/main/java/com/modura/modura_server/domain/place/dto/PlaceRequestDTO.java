@@ -9,7 +9,17 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 public class PlaceRequestDTO {
+    @Builder
+    @AllArgsConstructor
+    @Getter
+    @NoArgsConstructor
+    public static class PostPlaceReviewDTO {
+        @NotNull
+        @Min(value = 1)
+        @Max(value = 5)
+        private Integer rating;
 
     @Builder
     @AllArgsConstructor
@@ -44,5 +54,8 @@ public class PlaceRequestDTO {
         @Min(value = 0)
         @Max(value = 100)
         private Integer palette;
+    }
+        private String comment;
+        private List<String> imageUrl;
     }
 }

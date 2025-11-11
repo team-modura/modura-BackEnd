@@ -2,9 +2,13 @@ package com.modura.modura_server.domain.place.service;
 
 import com.modura.modura_server.domain.place.dto.PlaceRequestDTO;
 import com.modura.modura_server.domain.place.entity.Place;
+import com.modura.modura_server.domain.place.entity.PlaceReview;
+import com.modura.modura_server.domain.place.entity.ReviewImage;
 import com.modura.modura_server.domain.place.repository.PlaceLikesRepository;
 import com.modura.modura_server.domain.place.repository.PlaceRepository;
 import com.modura.modura_server.domain.user.entity.Stillcut;
+import com.modura.modura_server.domain.place.repository.PlaceReviewRepository;
+import com.modura.modura_server.domain.place.repository.ReviewImageRepository;
 import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.domain.user.entity.UserStillcut;
 import com.modura.modura_server.domain.user.repository.StillcutRepository;
@@ -27,6 +31,8 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
     private final UserRepository userRepository;
     private final StillcutRepository stillcutRepository;
     private final UserStillcutRepository userStillcutRepository;
+    private final ReviewImageRepository reviewImageRepository;
+    private final PlaceReviewRepository placeReviewRepository;
 
     @Override
     @Transactional
@@ -37,7 +43,9 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
 
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.PLACE_NOT_FOUND));
-        User user = entityManager.getReference(User.class, userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
+
         placeLikesRepository.save(
                 com.modura.modura_server.domain.place.entity.PlaceLikes.builder()
                         .place(place)
@@ -81,5 +89,32 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                 .build();
 
         userStillcutRepository.save(newUserStillcut);
+    }
+
+    @Override
+    @Transactional
+    public Void postPlaceReview(Long userId, Long placeId, PlaceRequestDTO.PostPlaceReviewDTO request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        Place place = placeRepository.findById(placeId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.PLACE_NOT_FOUND));
+
+        PlaceReview placeReview = PlaceReview.builder()
+                .user(user)
+                .place(place)
+                .rating(request.getRating())
+                .body(request.getComment())
+                .build();
+        placeReviewRepository.save(placeReview);
+
+        for (String imageUrl : request.getImageUrl()) {
+            ReviewImage reviewImage = ReviewImage.builder()
+                    .placeReview(placeReview)
+                    .imageUrl(imageUrl)
+                    .build();
+            reviewImageRepository.save(reviewImage);
+        }
+        return null;
     }
 }
