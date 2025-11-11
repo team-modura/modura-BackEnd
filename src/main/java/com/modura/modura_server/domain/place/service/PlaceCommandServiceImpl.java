@@ -57,7 +57,7 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
 
     @Override
     @Transactional
-    public Void postStillcut(Long userId, Long placeId, Long stillcutId, PlaceRequestDTO.PostStillcutDTO request) {
+    public void postStillcut(Long userId, Long placeId, Long stillcutId, PlaceRequestDTO.PostStillcutDTO request) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -66,7 +66,7 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                 .orElseThrow(() -> new BusinessException(ErrorStatus.STILLCUT_NOT_FOUND));
 
         if (!stillcut.getPlace().getId().equals(placeId)) {
-            throw new IllegalArgumentException("요청한 장소 ID와 스틸컷의 장소 ID가 일치하지 않습니다.");
+            throw new BusinessException(ErrorStatus.STILLCUT_PLACE_MISMATCH);
         }
 
         UserStillcut newUserStillcut = UserStillcut.builder()
@@ -81,7 +81,5 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                 .build();
 
         userStillcutRepository.save(newUserStillcut);
-
-        return null;
     }
 }

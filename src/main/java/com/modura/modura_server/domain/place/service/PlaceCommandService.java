@@ -5,5 +5,5 @@ import com.modura.modura_server.domain.place.dto.PlaceRequestDTO;
 public interface PlaceCommandService {
     void like(Long placeId, Long userId);
     void unlike(Long placeId, Long userId);
-    Void postStillcut(Long userId, Long placeId, Long stillcutId, PlaceRequestDTO.PostStillcutDTO request);
+    void postStillcut(Long userId, Long placeId, Long stillcutId, PlaceRequestDTO.PostStillcutDTO request);
 }
