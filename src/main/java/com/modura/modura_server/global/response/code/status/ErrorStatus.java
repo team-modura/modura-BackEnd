@@ -31,6 +31,7 @@ public enum ErrorStatus implements BaseCode {
 
     // 장소 관련 에러
     PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "PLACE4001", "장소가 없습니다."),
+    STILLCUT_NOT_FOUND(HttpStatus.NOT_FOUND, "STILLCUT4001", "스틸컷이 없습니다."),
     ;
 
     private final HttpStatus httpStatus;

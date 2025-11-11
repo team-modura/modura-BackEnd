@@ -1,12 +1,15 @@
 package com.modura.modura_server.domain.place.controller;
 
+import com.modura.modura_server.domain.place.dto.PlaceRequestDTO;
 import com.modura.modura_server.domain.place.dto.PlaceResponseDTO;
 import com.modura.modura_server.domain.place.service.PlaceCommandService;
 import com.modura.modura_server.domain.place.service.PlaceQueryService;
+import com.modura.modura_server.domain.user.dto.UserRequestDTO;
 import com.modura.modura_server.global.response.ApiResponse;
 import com.modura.modura_server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -49,6 +52,18 @@ public class PlaceController {
     public ApiResponse<PlaceResponseDTO.GetStillcutListDTO> getStillcut(@PathVariable Long placeId) {
 
         PlaceResponseDTO.GetStillcutListDTO response = placeQueryService.getStillcut(placeId);
+
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(summary = "유저 스틸컷 저장")
+    @PostMapping("/{placeId}/stillcuts/{stillcutId}")
+    public ApiResponse<Void> postStillcut(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                          @PathVariable Long placeId, @PathVariable Long stillcutId,
+                                          @Valid @RequestBody PlaceRequestDTO.PostStillcutDTO request) {
+
+        Long userId = userDetails.getUser().getId();
+        Void response = placeCommandService.postStillcut(userId, placeId, stillcutId, request);
 
         return ApiResponse.onSuccess(response);
     }
