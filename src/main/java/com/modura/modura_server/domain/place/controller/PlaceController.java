@@ -58,6 +58,22 @@ public class PlaceController {
         return ApiResponse.onSuccess(null);
     }
 
+    @Operation(summary = "촬영지 리뷰 조회")
+    @GetMapping("/{placeId}/reviews/{reviewId}")
+    public ApiResponse<PlaceResponseDTO.GetPlaceReviewDTO> getPlaceReview(@PathVariable Long placeId, @PathVariable Long reviewId) {
+        PlaceResponseDTO.GetPlaceReviewDTO response = placeQueryService.getPlaceReview(placeId, reviewId);
+
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(summary = "촬영지 리뷰 목록 조회")
+    @GetMapping("/{placeId}/reviews")
+    public ApiResponse<PlaceResponseDTO.GetPlaceReviewListDTO> getPlaceReviewList(@PathVariable Long placeId) {
+
+        PlaceResponseDTO.GetPlaceReviewListDTO response = placeQueryService.getPlaceReviewList(placeId);
+        return ApiResponse.onSuccess(response);
+    }
+
     @Operation(summary = "촬영지 스틸컷 조회")
     @GetMapping("/{placeId}/stillcuts")
     public ApiResponse<PlaceResponseDTO.GetStillcutListDTO> getStillcut(@PathVariable Long placeId) {

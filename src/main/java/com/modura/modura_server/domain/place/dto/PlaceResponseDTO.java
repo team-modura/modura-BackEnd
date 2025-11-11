@@ -13,6 +13,25 @@ public class PlaceResponseDTO {
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
+    public static class GetPlaceReviewDTO {
+        Long placeReviewId;
+        Integer rating;
+        String comment;
+        List<String> imageUrl;
+    }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetPlaceReviewListDTO {
+        List<GetPlaceReviewDTO> placeReviewList;
+    }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class GetStillcutDTO {
 
         Long stillcutId;
