@@ -20,6 +20,9 @@ public class PlaceRequestDTO {
         @Min(value = 1)
         @Max(value = 5)
         private Integer rating;
+        private String comment;
+        private List<String> imageUrl;
+    }
 
     @Builder
     @AllArgsConstructor
@@ -54,8 +57,5 @@ public class PlaceRequestDTO {
         @Min(value = 0)
         @Max(value = 100)
         private Integer palette;
-    }
-        private String comment;
-        private List<String> imageUrl;
     }
 }

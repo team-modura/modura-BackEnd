@@ -46,6 +46,18 @@ public class PlaceController {
         return ApiResponse.onSuccess(null);
     }
 
+    @Operation(summary = "촬영지 리뷰 등록")
+    @PostMapping("/{placeId}/reviews")
+    public ApiResponse<Void> postPlaceReview(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                             @PathVariable Long placeId,
+                                             @Valid @RequestBody PlaceRequestDTO.PostPlaceReviewDTO request) {
+
+        Long userId = userDetails.getUser().getId();
+        placeCommandService.postPlaceReview(userId, placeId, request);
+
+        return ApiResponse.onSuccess(null);
+    }
+
     @Operation(summary = "촬영지 스틸컷 조회")
     @GetMapping("/{placeId}/stillcuts")
     public ApiResponse<PlaceResponseDTO.GetStillcutListDTO> getStillcut(@PathVariable Long placeId) {

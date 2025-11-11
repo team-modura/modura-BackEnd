@@ -65,7 +65,7 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
 
     @Override
     @Transactional
-    public void postStillcut(Long userId, Long placeId, Long stillcutId, PlaceRequestDTO.PostStillcutDTO request) {
+    public Void postStillcut(Long userId, Long placeId, Long stillcutId, PlaceRequestDTO.PostStillcutDTO request) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -89,11 +89,12 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                 .build();
 
         userStillcutRepository.save(newUserStillcut);
+        return null;
     }
 
     @Override
     @Transactional
-    public Void postPlaceReview(Long userId, Long placeId, PlaceRequestDTO.PostPlaceReviewDTO request) {
+    public void postPlaceReview(Long userId, Long placeId, PlaceRequestDTO.PostPlaceReviewDTO request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
 
@@ -115,6 +116,5 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
                     .build();
             reviewImageRepository.save(reviewImage);
         }
-        return null;
     }
 }

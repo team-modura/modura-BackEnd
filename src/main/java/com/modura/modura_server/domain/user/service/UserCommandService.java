@@ -4,5 +4,5 @@ import com.modura.modura_server.domain.user.dto.UserRequestDTO;
 
 public interface UserCommandService {
 
-    void updateUser(Long userId, UserRequestDTO.UpdateUserDTO request);
+    Void updateUser(Long userId, UserRequestDTO.UpdateUserDTO request);
 }

@@ -26,7 +26,7 @@ public class UserCommandServiceImpl implements UserCommandService {
 
     @Override
     @Transactional
-    public void updateUser(Long userId, UserRequestDTO.UpdateUserDTO request) {
+    public Void updateUser(Long userId, UserRequestDTO.UpdateUserDTO request) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -55,5 +55,6 @@ public class UserCommandServiceImpl implements UserCommandService {
 
             userCategoryRepository.saveAll(newUserCategories);
         }
+        return null;
     }
 }
