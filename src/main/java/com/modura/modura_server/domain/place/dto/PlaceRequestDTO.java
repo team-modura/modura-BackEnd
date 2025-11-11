@@ -9,7 +9,23 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 public class PlaceRequestDTO {
+    @Builder
+    @AllArgsConstructor
+    @Getter
+    @NoArgsConstructor
+    public static class PostPlaceReviewDTO {
+        @NotNull
+        @Min(value = 1)
+        @Max(value = 5)
+        private Integer rating;
+
+        @NotBlank(message = "리뷰 내용은 필수입니다.")
+        private String comment;
+
+        private List<String> imageUrl;
+    }
 
     @Builder
     @AllArgsConstructor

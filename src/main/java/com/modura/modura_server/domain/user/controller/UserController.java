@@ -31,9 +31,9 @@ public class UserController {
                                                               @Valid @RequestBody UserRequestDTO.UpdateUserDTO request) {
 
         Long userId = userDetails.getUser().getId();
-        Void response = userCommandService.updateUser(userId, request);
+        userCommandService.updateUser(userId, request);
 
-        return ApiResponse.onSuccess(response);
+        return ApiResponse.onSuccess(null);
     }
 
     @Operation(summary = "찜한 컨텐츠 조회")
