@@ -14,12 +14,8 @@ import com.modura.modura_server.global.response.code.status.ErrorStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
@@ -54,14 +50,13 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         String accessToken = jwtProvider.generateAccessToken(user);
         String refreshToken = jwtProvider.generateRefreshToken(user);
 
-        return AuthConverter.toGetUserDTO(user, accessToken, refreshToken);
+        return AuthConverter.toGetUserDTO(user, accessToken, refreshToken, true);
     }
 
     @Override
     @Transactional
     public AuthResponseDTO.GetUserDTO kakaoLogin(AuthRequestDTO.KakaoLoginDTO request) {
 
-//        AuthResponseDTO.GetKakaoTokenDTO kakaoToken = getKakaoToken(request.getCode());
         AuthResponseDTO.GetKakaoUserInfoDTO userInfo = getKakaoUserInfo(request.getAccessToken());
 
         String nickname =
@@ -81,10 +76,11 @@ public class AuthCommandServiceImpl implements AuthCommandService {
                     return userRepository.save(newUser);
                 });
 
+        boolean isNewUser = (user.getAddress() == null);
         String accessToken = jwtProvider.generateAccessToken(user);
         String refreshToken = jwtProvider.generateRefreshToken(user);
 
-        return AuthConverter.toGetUserDTO(user, accessToken, refreshToken);
+        return AuthConverter.toGetUserDTO(user, accessToken, refreshToken, isNewUser);
     }
 
     @Override
@@ -93,28 +89,12 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
 
+        boolean isNewUser = (user.getAddress() == null);
         String accessToken = jwtProvider.generateAccessToken(user);
         String refreshToken = jwtProvider.generateRefreshToken(user);
 
-        return AuthConverter.toGetUserDTO(user, accessToken, refreshToken);
+        return AuthConverter.toGetUserDTO(user, accessToken, refreshToken, isNewUser);
     }
-
-/*    private AuthResponseDTO.GetKakaoTokenDTO getKakaoToken(String code) {
-
-        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-        formData.add("grant_type", "authorization_code");
-        formData.add("client_id", CLIENT_ID);
-        formData.add("redirect_uri", REDIRECT_URI);
-        formData.add("code", code);
-
-        return webClient.post()
-                .uri(KAKAO_TOKEN_URI)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(BodyInserters.fromFormData(formData))
-                .retrieve()
-                .bodyToMono(AuthResponseDTO.GetKakaoTokenDTO.class)
-                .block(Duration.ofSeconds(10));
-    }*/
 
     private AuthResponseDTO.GetKakaoUserInfoDTO getKakaoUserInfo(String accessToken) {
 

@@ -17,22 +17,7 @@ public class AuthResponseDTO {
         Long id;
         String accessToken;
         String refreshToken;
-    }
-
-    @Builder
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class GetKakaoTokenDTO {
-
-        @JsonProperty("token_type")
-        private String tokenType;
-
-        @JsonProperty("access_token")
-        private String accessToken;
-
-        @JsonProperty("refresh_token")
-        private String refreshToken;
+        Boolean isNewUser;
     }
 
     @Builder
