@@ -85,6 +85,7 @@ public class UserQueryServiceImpl implements UserQueryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserResponseDTO.GetMyStillcutDetailDTO getMyStillcutDetail(Long userId, Long stillcutId) {
 
         UserStillcut userStillcut = userStillcutRepository.findUserDetailsById(userId, stillcutId)
