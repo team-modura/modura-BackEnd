@@ -3,8 +3,10 @@ package com.modura.modura_server.domain.user.controller;
 import com.modura.modura_server.domain.user.dto.AuthRequestDTO;
 import com.modura.modura_server.domain.user.dto.AuthResponseDTO;
 import com.modura.modura_server.domain.user.service.AuthCommandService;
+import com.modura.modura_server.global.exception.BusinessException;
 import com.modura.modura_server.global.jwt.JwtProvider;
 import com.modura.modura_server.global.response.ApiResponse;
+import com.modura.modura_server.global.response.code.status.ErrorStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -61,5 +63,21 @@ public class AuthController {
         authCommandService.logout(accessToken);
 
         return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "토큰 재발급")
+    @PostMapping("/reissue")
+    public ApiResponse<AuthResponseDTO.GetUserDTO> reissueToken(HttpServletRequest request) {
+
+        String accessToken = jwtProvider.resolveToken(request);
+        String refreshToken = request.getHeader("X-Refresh-Token");
+
+        if (accessToken == null || refreshToken == null) {
+            throw new BusinessException(ErrorStatus.TOKEN_MISSING);
+        }
+
+        AuthResponseDTO.GetUserDTO response = authCommandService.reissueToken(accessToken, refreshToken);
+
+        return ApiResponse.onSuccess(response);
     }
 }

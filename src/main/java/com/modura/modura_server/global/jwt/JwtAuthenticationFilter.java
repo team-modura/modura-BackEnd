@@ -39,7 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 토큰이 유효하고 블랙리스트에 없을 경우, 토큰에서 Authentication 객체를 가져와 SecurityContext에 저장
+        // 3. 토큰이 유효하고 블랙리스트에 없을 경우, 토큰에서 Authentication 객체를 가져와 SecurityContext에 저장
         setAuthentication(token);
 
         // 4. 다음 필터로 진행
