@@ -4,7 +4,9 @@ import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.place.dto.PlaceResponseDTO;
 import com.modura.modura_server.domain.place.entity.Place;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
+import com.modura.modura_server.domain.user.dto.UserResponseDTO;
 import com.modura.modura_server.domain.user.entity.Stillcut;
+import com.modura.modura_server.domain.user.entity.UserStillcut;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -59,6 +61,13 @@ public class UserConverter {
                 .collect(Collectors.toList());
 
         return PlaceResponseDTO.GetStillcutListDTO.builder()
+                .stillcutList(stillcutDTOList)
+                .build();
+    }
+
+    public static UserResponseDTO.GetMyStillcutListDTO toGetMyStillcutListDTO(List<UserResponseDTO.GetMyStillcutDTO> stillcutDTOList){
+
+        return UserResponseDTO.GetMyStillcutListDTO.builder()
                 .stillcutList(stillcutDTOList)
                 .build();
     }

@@ -2,6 +2,7 @@ package com.modura.modura_server.domain.user.controller;
 
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 import com.modura.modura_server.domain.user.dto.UserRequestDTO;
+import com.modura.modura_server.domain.user.dto.UserResponseDTO;
 import com.modura.modura_server.domain.user.service.UserCommandService;
 import com.modura.modura_server.domain.user.service.UserQueryService;
 import com.modura.modura_server.global.response.ApiResponse;
@@ -53,6 +54,16 @@ public class UserController {
 
         Long userId = userDetails.getUser().getId();
         SearchResponseDTO.SearchPlaceListDTO response = userQueryService.getLikedPlace(userId);
+
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(summary = "유저 스틸컷 조회")
+    @GetMapping("/stillcuts")
+    public ApiResponse<UserResponseDTO.GetMyStillcutListDTO> getMyStillcutList(@AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        UserResponseDTO.GetMyStillcutListDTO response = userQueryService.getMyStillcutList(userId);
 
         return ApiResponse.onSuccess(response);
     }
