@@ -112,4 +112,22 @@ public class JwtProvider {
         }
         return null;
     }
+
+    public Long getRemainingExpiration(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            Date expiration = claims.getExpiration();
+            long now = new Date().getTime();
+
+            return (expiration.getTime() - now);
+        } catch (Exception e) {
+            log.error("토큰 만료 시간 파싱 중 오류 발생: {}", e.getMessage());
+            return 0L;
+        }
+    }
 }
