@@ -67,4 +67,15 @@ public class UserController {
 
         return ApiResponse.onSuccess(response);
     }
+
+    @Operation(summary = "유저 스틸컷 상세 조회")
+    @GetMapping("/stillcuts/{stillcutId}")
+    public ApiResponse<UserResponseDTO.GetMyStillcutDetailDTO> getMyStillcutDetail(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                                   @PathVariable Long stillcutId) {
+
+        Long userId = userDetails.getUser().getId();
+        UserResponseDTO.GetMyStillcutDetailDTO response = userQueryService.getMyStillcutDetail(userId, stillcutId);
+
+        return ApiResponse.onSuccess(response);
+    }
 }

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 
 public interface UserStillcutRepository extends JpaRepository<UserStillcut, Long> {
@@ -14,4 +15,9 @@ public interface UserStillcutRepository extends JpaRepository<UserStillcut, Long
             "JOIN FETCH us.stillcut s JOIN FETCH s.content c JOIN FETCH s.place p " +
             "WHERE us.user.id = :userId")
     List<UserStillcut> findAllWithDetailsByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT us FROM UserStillcut us " +
+            "JOIN FETCH us.stillcut s JOIN FETCH s.content c JOIN FETCH s.place p " +
+            "WHERE us.user.id = :userId AND us.id = :userStillcutId")
+    Optional<UserStillcut> findUserDetailsById(@Param("userId") Long userId,@Param("userStillcutId") Long stillcutId);
 }

@@ -27,4 +27,18 @@ public class UserResponseDTO {
 
         List<GetMyStillcutDTO> stillcutList;
     }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetMyStillcutDetailDTO {
+
+        Long id;
+        String imageUrl;
+        String stillcut;
+        String title;
+        String name;
+        String date;
+    }
 }
