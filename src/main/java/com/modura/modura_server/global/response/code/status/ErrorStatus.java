@@ -36,6 +36,7 @@ public enum ErrorStatus implements BaseCode {
     // 스틸컷 관련 에러
     STILLCUT_NOT_FOUND(HttpStatus.NOT_FOUND, "STILLCUT4001", "스틸컷이 없습니다."),
     STILLCUT_PLACE_MISMATCH(HttpStatus.BAD_REQUEST, "STILLCUT4002", "스틸컷이 해당 장소에 속하지 않습니다."),
+    USER_STILLCUT_NOT_FOUND(HttpStatus.NOT_FOUND, "STILLCUT4003", "유저 스틸컷이 없습니다."),
     ;
 
     private final HttpStatus httpStatus;
