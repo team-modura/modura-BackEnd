@@ -1,24 +1,24 @@
 package com.modura.modura_server.domain.user.service;
 
-import com.modura.modura_server.domain.content.repository.CategoryRepository;
 import com.modura.modura_server.domain.user.converter.AuthConverter;
 import com.modura.modura_server.domain.user.dto.AuthRequestDTO;
 import com.modura.modura_server.domain.user.dto.AuthResponseDTO;
 import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.domain.user.entity.enums.Role;
-import com.modura.modura_server.domain.user.repository.UserCategoryRepository;
 import com.modura.modura_server.domain.user.repository.UserRepository;
 import com.modura.modura_server.global.exception.BusinessException;
 import com.modura.modura_server.global.jwt.JwtProvider;
 import com.modura.modura_server.global.response.code.status.ErrorStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +27,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
     private final WebClient webClient;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Value("${kakao.client-id}")
     private String CLIENT_ID;
@@ -34,7 +35,6 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     @Value("${kakao.redirect-uri}")
     private String REDIRECT_URI;
 
-    private static final String KAKAO_TOKEN_URI = "https://kauth.kakao.com/oauth/token";
     private static final String KAKAO_USER_INFO_URI = "https://kapi.kakao.com/v2/user/me";
 
     @Override
@@ -84,6 +84,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     }
 
     @Override
+    @Transactional
     public AuthResponseDTO.GetUserDTO testLogin(Long userId) {
 
         User user = userRepository.findById(userId)
@@ -94,6 +95,27 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         String refreshToken = jwtProvider.generateRefreshToken(user);
 
         return AuthConverter.toGetUserDTO(user, accessToken, refreshToken, isNewUser);
+    }
+
+    @Override
+    @Transactional
+    public void logout(String accessToken) {
+
+        if (!jwtProvider.validateToken(accessToken)) {
+            throw new BusinessException(ErrorStatus.UNAUTHORIZED);
+        }
+
+        Long remainingTime = jwtProvider.getRemainingExpiration(accessToken);
+
+        // Redis에 (Key: 토큰, Value: "logout", TTL: 남은 유효 시간) 저장
+        if (remainingTime > 0) {
+            redisTemplate.opsForValue().set(
+                    accessToken,
+                    "logout",
+                    remainingTime,
+                    TimeUnit.MILLISECONDS
+            );
+        }
     }
 
     private AuthResponseDTO.GetKakaoUserInfoDTO getKakaoUserInfo(String accessToken) {
