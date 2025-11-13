@@ -18,11 +18,9 @@ import com.modura.modura_server.global.response.code.status.ErrorStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.modura.modura_server.domain.content.entity.ContentLikes;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -115,11 +113,21 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 stillcutRepository.findByPlaceId(place.getId())
         ).orElse(List.of());
 
-        List<PlaceResponseDTO.contentItemDTO> contentList = stillcuts.stream()
+        List<Long> contentIds = stillcuts.stream()
+                .map(stillcut -> stillcut.getContent().getId())
+                .distinct()
+                .collect(Collectors.toList());
+
+        Set<Long> likedContentIds = contentLikesRepository
+                .findByUserIdAndContentIdIn(userId, contentIds).stream()
+                .map(contentLikes -> contentLikes.getContent().getId())
+                .collect(Collectors.toSet());
+
+        List<PlaceResponseDTO.ContentItemDTO> contentList = stillcuts.stream()
                 .map(stillcut -> {
                     Long contentId = stillcut.getContent().getId();
-                    Boolean isContentLiked = contentLikesRepository.existsByUserIdAndContentId(userId, contentId);
-                    return PlaceResponseDTO.contentItemDTO.builder()
+                    Boolean isContentLiked = likedContentIds.contains(contentId);
+                    return PlaceResponseDTO.ContentItemDTO.builder()
                             .contentId(contentId)
                             .title(stillcut.getContent().getTitleKr())
                             .thumbnail(stillcut.getContent().getThumbnail())
@@ -128,11 +136,23 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 })
                 .collect(Collectors.toList());
 
+        List<Long> reviewIds = reviews.stream()
+                .map(PlaceReview::getId)
+                .collect(Collectors.toList());
+
+        List<ReviewImage> allImages = reviewImageRepository.findByPlaceReviewIdIn(reviewIds);
+        Map<Long, List<String>> imagesByReviewId = allImages.stream()
+                .collect(Collectors.groupingBy(
+                        img -> img.getPlaceReview().getId(),
+                        Collectors.mapping(ReviewImage::getImageUrl, Collectors.toList())
+                ));
+
         List<PlaceResponseDTO.ReviewItemDTO> reviewDTOs = reviews.stream()
                 .map(review -> {
-                    List<String> imageUrls = reviewImageRepository.findByPlaceReviewId(review.getId()).stream()
-                            .map(ReviewImage::getImageUrl)
-                            .collect(Collectors.toList());
+                    List<String> imageUrls = imagesByReviewId.getOrDefault(
+                            review.getId(),
+                            Collections.emptyList()
+                    );
 
                     return PlaceResponseDTO.ReviewItemDTO.builder()
                             .placeReviewId(review.getId())

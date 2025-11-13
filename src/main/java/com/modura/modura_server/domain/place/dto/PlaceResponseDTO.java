@@ -67,7 +67,7 @@ public class PlaceResponseDTO {
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class contentItemDTO {
+    public static class ContentItemDTO {
         Long contentId;
         String title;
         String thumbnail;
@@ -87,7 +87,7 @@ public class PlaceResponseDTO {
         Float longitude;
         Boolean isLiked;
         String placeImageUrl;
-        List<contentItemDTO> contentList;
+        List<ContentItemDTO> contentList;
         List<ReviewItemDTO> reviews;
     }
 }

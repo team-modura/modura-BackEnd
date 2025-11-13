@@ -29,7 +29,7 @@ public class PlaceConverter {
             Boolean isLiked,
             Double reviewAvg,
             Integer reviewCount,
-            List<PlaceResponseDTO.contentItemDTO> contentList,
+            List<PlaceResponseDTO.ContentItemDTO> contentList,
             List<PlaceResponseDTO.ReviewItemDTO> reviews
     ){
 
