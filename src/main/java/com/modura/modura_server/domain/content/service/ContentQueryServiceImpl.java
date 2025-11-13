@@ -2,6 +2,7 @@ package com.modura.modura_server.domain.content.service;
 
 import com.modura.modura_server.domain.content.converter.ContentConverter;
 import com.modura.modura_server.domain.content.dto.ContentResponseDTO;
+import com.modura.modura_server.domain.content.dto.PopularContentCacheDTO;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.entity.ContentReview;
 import com.modura.modura_server.domain.content.entity.Platform;
@@ -12,8 +13,6 @@ import com.modura.modura_server.domain.place.repository.PlaceLikesRepository;
 import com.modura.modura_server.domain.user.entity.Stillcut;
 import com.modura.modura_server.domain.user.repository.StillcutRepository;
 import com.modura.modura_server.global.exception.BusinessException;
-import com.modura.modura_server.global.tmdb.client.TmdbApiClient;
-import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +32,7 @@ public class ContentQueryServiceImpl implements ContentQueryService {
     private final PlatformRepository platformRepository;
     private final PlaceLikesRepository placeLikesRepository;
     private final StillcutRepository stillcutRepository;
-    private final TmdbApiClient tmdbApiClient;
+    private final PopularContentService popularContentService;
 
     @Override
     @Transactional(readOnly = true)
@@ -141,69 +140,22 @@ public class ContentQueryServiceImpl implements ContentQueryService {
     @Transactional(readOnly = true)
     public ContentResponseDTO.GetTopContentListDTO getTopContent(Long userId) {
 
-        final int TARGET_COUNT = 10;
-        final int MAX_PAGES_TO_FETCH = 5; // API 호출 횟수 제한
-        int page = 1;
+        List<PopularContentCacheDTO> cachedContents = popularContentService.getPopularContent();
 
-        List<Content> orderedExistingContents = new ArrayList<>();
-
-        // 목표 개수를 채울 때까지 TMDB 페이지를 순차적으로 조회
-        while (orderedExistingContents.size() < TARGET_COUNT && page <= MAX_PAGES_TO_FETCH) {
-            List<Integer> orderedTmdbIds = fetchPopularTmdbIdsByPage(page);
-            if (orderedTmdbIds.isEmpty()) {
-                break;
-            }
-
-            List<Content> foundContents = findExistingContentsInOrder(orderedTmdbIds);
-            for (Content content : foundContents) {
-                if (orderedExistingContents.size() < TARGET_COUNT) {
-                    orderedExistingContents.add(content);
-                } else {
-                    break;
-                }
-            }
-            page++;
-        }
-
-        if (orderedExistingContents.isEmpty()) {
+        if (cachedContents.isEmpty()) {
             return ContentResponseDTO.GetTopContentListDTO.builder()
                     .contentList(Collections.emptyList())
                     .build();
         }
 
-        List<Long> contentIds = orderedExistingContents.stream()
-                .map(Content::getId)
+        List<Long> contentIds = cachedContents.stream()
+                .map(PopularContentCacheDTO::getId)
                 .collect(Collectors.toList());
 
         // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
         Set<Long> likedContentIds = contentLikesRepository.findIdsByUserIdAndContentIds(userId, contentIds);
 
-        return ContentConverter.toGetTopContentListDTO(orderedExistingContents, likedContentIds);
-    }
-
-    private List<Integer> fetchPopularTmdbIdsByPage(int page) {
-
-        TmdbMovieResponseDTO tmdbResponse = tmdbApiClient.fetchMovieDiscoverPage(page).block(); //
-
-        if (tmdbResponse == null || tmdbResponse.getResults() == null || tmdbResponse.getResults().isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return tmdbResponse.getResults().stream()
-                .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
-                .collect(Collectors.toList());
-    }
-
-    private List<Content> findExistingContentsInOrder(List<Integer> orderedTmdbIds) {
-        List<Content> contentsFromDb = contentRepository.findAllByTmdbIdIn(orderedTmdbIds);
-
-        Map<Integer, Content> contentMap = contentsFromDb.stream()
-                .collect(Collectors.toMap(Content::getTmdbId, content -> content));
-
-        return orderedTmdbIds.stream()
-                .map(contentMap::get)
-                .filter(Objects::nonNull) // DB에 존재하지 않는 경우 필터링
-                .collect(Collectors.toList());
+        return ContentConverter.toGetTopContentListDTOFromCache(cachedContents, likedContentIds);
     }
 
     @Override

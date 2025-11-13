@@ -1,6 +1,7 @@
 package com.modura.modura_server.domain.content.converter;
 
 import com.modura.modura_server.domain.content.dto.ContentResponseDTO;
+import com.modura.modura_server.domain.content.dto.PopularContentCacheDTO;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.entity.ContentReview;
 
@@ -100,22 +101,22 @@ public class ContentConverter {
                 .build();
     }
 
-    public static ContentResponseDTO.GetTopContentDTO toGetTopContentDTO(Content content, boolean isLiked) {
+    public static ContentResponseDTO.GetTopContentDTO toGetTopContentDTOFromCache(PopularContentCacheDTO cacheDTO, boolean isLiked) {
 
         return ContentResponseDTO.GetTopContentDTO.builder()
-                .id(content.getId())
-                .title(content.getTitleKr())
+                .id(cacheDTO.getId())
+                .title(cacheDTO.getTitleKr())
                 .isLiked(isLiked)
-                .thumbnail(content.getThumbnail())
+                .thumbnail(cacheDTO.getThumbnail())
                 .build();
     }
 
-    public static ContentResponseDTO.GetTopContentListDTO toGetTopContentListDTO(List<Content> contentList, Set<Long> likedContentIds){
+    public static ContentResponseDTO.GetTopContentListDTO toGetTopContentListDTOFromCache(List<PopularContentCacheDTO> contentList, Set<Long> likedContentIds){
 
         List<ContentResponseDTO.GetTopContentDTO> contentDTOList = contentList.stream()
-                .map(content -> {
-                    boolean isLiked = likedContentIds.contains(content.getId());
-                    return toGetTopContentDTO(content, isLiked);
+                .map(cacheDto -> {
+                    boolean isLiked = likedContentIds.contains(cacheDto.getId());
+                    return toGetTopContentDTOFromCache(cacheDto, isLiked);
                 })
                 .collect(Collectors.toList());
 
