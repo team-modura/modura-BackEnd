@@ -37,6 +37,14 @@ public enum ErrorStatus implements BaseCode {
     STILLCUT_NOT_FOUND(HttpStatus.NOT_FOUND, "STILLCUT4001", "스틸컷이 없습니다."),
     STILLCUT_PLACE_MISMATCH(HttpStatus.BAD_REQUEST, "STILLCUT4002", "스틸컷이 해당 장소에 속하지 않습니다."),
     USER_STILLCUT_NOT_FOUND(HttpStatus.NOT_FOUND, "STILLCUT4003", "유저 스틸컷이 없습니다."),
+
+    // 인증관련 에러
+    TOKEN_MISSING(HttpStatus.BAD_REQUEST, "AUTH4001", "Access Token 또는 Refresh Token이 누락되었습니다."),
+    REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "AUTH4002", "로그인 정보가 만료되었습니다."),
+    REFRESH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH4003", "Refresh Token이 만료되었습니다."),
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH4004", "유효하지 않은 토큰입니다."),
+    REFRESH_TOKEN_MISMATCH(HttpStatus.FORBIDDEN, "AUTH4005", "Refresh Token이 일치하지 않습니다.")
+
     ;
 
     private final HttpStatus httpStatus;

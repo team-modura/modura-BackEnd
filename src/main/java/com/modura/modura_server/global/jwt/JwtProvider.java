@@ -1,6 +1,8 @@
 package com.modura.modura_server.global.jwt;
 
 import com.modura.modura_server.domain.user.entity.User;
+import com.modura.modura_server.global.exception.BusinessException;
+import com.modura.modura_server.global.response.code.status.ErrorStatus;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -28,7 +30,7 @@ public class JwtProvider {
     // 30분 (1000L * 60 * 30)
     private static final long ACCESS_TOKEN_VALIDITY_MS = 1800000L;
     // 7일 (1000L * 60 * 60 * 24 * 7)
-    private static final long REFRESH_TOKEN_VALIDITY_MS = 604800000L;
+    public static final long REFRESH_TOKEN_VALIDITY_MS = 604800000L;
 
     private final Key key;
     private final UserDetailsService userDetailsService;
@@ -111,5 +113,43 @@ public class JwtProvider {
             return bearerToken.substring(BEARER_PREFIX.length());
         }
         return null;
+    }
+
+    public Long getRemainingExpiration(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            Date expiration = claims.getExpiration();
+            long now = new Date().getTime();
+
+            return (expiration.getTime() - now);
+        } catch (Exception e) {
+            log.error("토큰 만료 시간 파싱 중 오류 발생: {}", e.getMessage());
+            return 0L;
+        }
+    }
+
+    /**
+     * 만료된 토큰에서도 User ID 추출 (재발급용)
+     */
+    public String getUserIdFromToken(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .getSubject();
+        } catch (ExpiredJwtException e) {
+            // 토큰이 만료되었어도 Subject(userId)는 추출
+            return e.getClaims().getSubject();
+        } catch (Exception e) {
+            log.error("토큰에서 User ID 추출 중 오류 발생: {}", e.getMessage());
+            throw new BusinessException(ErrorStatus.INVALID_TOKEN);
+        }
     }
 }
