@@ -1,6 +1,6 @@
 package com.modura.modura_server.global.tmdb.runner;
 
-import jakarta.annotation.PostConstruct;
+import com.modura.modura_server.domain.content.service.PopularContentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -17,6 +17,7 @@ public class TmdbJobScheduler {
 
     private final JobLauncher jobLauncher;
     private final Job tmdbSeedingJob;
+    private final PopularContentService popularContentService;
 
     /**
      * fixedDelay = 3600000: 직전 작업이 '종료'된 후 1시간 뒤 실행
@@ -25,6 +26,9 @@ public class TmdbJobScheduler {
     public void runJobPeriodically() {
         log.info("Running periodic TMDB seeding job...");
         runJob();
+
+        log.info("Running periodic popular content cache refresh...");
+        popularContentService.refreshPopularContent();
     }
 
     private void runJob() {
