@@ -1,9 +1,12 @@
 package com.modura.modura_server.domain.place.service;
 
+import com.modura.modura_server.domain.content.repository.ContentLikesRepository;
 import com.modura.modura_server.domain.place.converter.PlaceConverter;
 import com.modura.modura_server.domain.place.dto.PlaceResponseDTO;
+import com.modura.modura_server.domain.place.entity.Place;
 import com.modura.modura_server.domain.place.entity.PlaceReview;
 import com.modura.modura_server.domain.place.entity.ReviewImage;
+import com.modura.modura_server.domain.place.repository.PlaceLikesRepository;
 import com.modura.modura_server.domain.place.repository.PlaceRepository;
 import com.modura.modura_server.domain.place.repository.PlaceReviewRepository;
 import com.modura.modura_server.domain.place.repository.ReviewImageRepository;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +33,8 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     private final PlaceReviewRepository placeReviewRepository;
     private final PlaceRepository placeRepository;
     private final ReviewImageRepository reviewImageRepository;
+    private final PlaceLikesRepository placeLikesRepository;
+    private final ContentLikesRepository contentLikesRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -88,5 +94,64 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 .toList();
 
         return PlaceConverter.toGetPlaceReviewListDTO(placeReviewDTOList);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PlaceResponseDTO.GetPlaceDetailDTO getPlaceDetail(Long placeId, Long userId) {
+        Place place = placeRepository.findById(placeId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.PLACE_NOT_FOUND));
+
+        Boolean isLiked = placeLikesRepository.existsByUserIdAndPlaceId(userId, placeId);
+
+        Double reviewAvg = placeReviewRepository.findAverageRatingByPlaceId(placeId);
+        Integer reviewCount = placeReviewRepository.countByPlace(placeId);
+
+        List<PlaceReview> reviews = Optional.ofNullable(
+                placeReviewRepository.findByPlace(placeId)
+        ).orElse(List.of());
+
+        List<Stillcut> stillcuts = Optional.ofNullable(
+                stillcutRepository.findByPlaceId(place.getId())
+        ).orElse(List.of());
+
+        List<PlaceResponseDTO.contentItemDTO> contentList = stillcuts.stream()
+                .map(stillcut -> {
+                    Long contentId = stillcut.getContent().getId();
+                    Boolean isContentLiked = contentLikesRepository.existsByUserIdAndContentId(userId, contentId);
+                    return PlaceResponseDTO.contentItemDTO.builder()
+                            .contentId(contentId)
+                            .title(stillcut.getContent().getTitleKr())
+                            .thumbnail(stillcut.getContent().getThumbnail())
+                            .isLiked(isContentLiked)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        List<PlaceResponseDTO.ReviewItemDTO> reviewDTOs = reviews.stream()
+                .map(review -> {
+                    List<String> imageUrls = reviewImageRepository.findByPlaceReviewId(review.getId()).stream()
+                            .map(ReviewImage::getImageUrl)
+                            .collect(Collectors.toList());
+
+                    return PlaceResponseDTO.ReviewItemDTO.builder()
+                            .placeReviewId(review.getId())
+                            .username(review.getUser().getNickname())
+                            .rating(review.getRating())
+                            .comment(review.getBody())
+                            .imageUrl(imageUrls)
+                            .createdAt(review.getCreatedAt().toString())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return PlaceConverter.toGetPlaceDetailDTO(
+                place,
+                isLiked,
+                reviewAvg,
+                reviewCount,
+                contentList,
+                reviewDTOs
+        );
     }
 }
