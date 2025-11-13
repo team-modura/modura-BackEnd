@@ -3,8 +3,6 @@ package com.modura.modura_server.domain.content.converter;
 import com.modura.modura_server.domain.content.dto.ContentResponseDTO;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.entity.ContentReview;
-import com.modura.modura_server.domain.place.entity.Place;
-import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 
 import java.util.Comparator;
 import java.util.List;

@@ -1,6 +1,5 @@
 package com.modura.modura_server.domain.content.dto;
 
-import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 import lombok.*;
 import java.util.List;
 
