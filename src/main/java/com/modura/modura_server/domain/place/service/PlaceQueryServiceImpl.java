@@ -15,10 +15,10 @@ import com.modura.modura_server.domain.user.entity.Stillcut;
 import com.modura.modura_server.domain.user.repository.StillcutRepository;
 import com.modura.modura_server.global.exception.BusinessException;
 import com.modura.modura_server.global.response.code.status.ErrorStatus;
+import com.modura.modura_server.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.modura.modura_server.domain.content.entity.ContentLikes;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +33,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     private final ReviewImageRepository reviewImageRepository;
     private final PlaceLikesRepository placeLikesRepository;
     private final ContentLikesRepository contentLikesRepository;
+    private final S3Service s3Service;
 
     @Override
     @Transactional(readOnly = true)
@@ -45,7 +46,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
 
     @Override
     @Transactional(readOnly = true)
-    public PlaceResponseDTO.GetPlaceReviewDTO getPlaceReview(Long placeId, Long reviewId){
+    public PlaceResponseDTO.ReviewItemDTO getPlaceReview(Long placeId, Long reviewId){
         placeRepository.findById(placeId)
             .orElseThrow(() -> new BusinessException(ErrorStatus.PLACE_NOT_FOUND));
 
@@ -54,11 +55,13 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
 
         List<ReviewImage> reviewImageList = reviewImageRepository.findByPlaceReviewId(placeReview.getId());
 
-        List<String> imageUrlList = reviewImageList.stream()
+        List<String> s3Keys = reviewImageList.stream()
             .map(ReviewImage::getImageUrl)
             .toList();
 
-        return PlaceConverter.toGetPlaceReviewDTO(placeReview, imageUrlList);
+        List<String> imageUrls = s3Service.generateViewPresignedUrls(s3Keys);
+
+        return PlaceConverter.toGetPlaceReviewDTO(placeReview, imageUrls);
     }
 
     @Override
@@ -81,12 +84,13 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                         Collectors.mapping(ReviewImage::getImageUrl, Collectors.toList())
                 ));
 
-        List<PlaceResponseDTO.GetPlaceReviewDTO> placeReviewDTOList = placeReviewList.stream()
+        List<PlaceResponseDTO.ReviewItemDTO> placeReviewDTOList = placeReviewList.stream()
                 .map(placeReview -> {
-                    List<String> imageUrlList = imagesByReviewId.getOrDefault(
+                    List<String> s3Keys = imagesByReviewId.getOrDefault(
                             placeReview.getId(),
                             Collections.emptyList()
                     );
+                    List<String> imageUrlList = s3Service.generateViewPresignedUrls(s3Keys);
                     return PlaceConverter.toGetPlaceReviewDTO(placeReview, imageUrlList);
                 })
                 .toList();
@@ -149,10 +153,12 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
 
         List<PlaceResponseDTO.ReviewItemDTO> reviewDTOs = reviews.stream()
                 .map(review -> {
-                    List<String> imageUrls = imagesByReviewId.getOrDefault(
+                    List<String> s3Keys = imagesByReviewId.getOrDefault(
                             review.getId(),
                             Collections.emptyList()
                     );
+
+                    List<String> imageUrls = s3Service.generateViewPresignedUrls(s3Keys);
 
                     return PlaceResponseDTO.ReviewItemDTO.builder()
                             .placeReviewId(review.getId())
