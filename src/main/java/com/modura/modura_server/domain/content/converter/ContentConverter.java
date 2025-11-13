@@ -3,9 +3,12 @@ package com.modura.modura_server.domain.content.converter;
 import com.modura.modura_server.domain.content.dto.ContentResponseDTO;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.entity.ContentReview;
+import com.modura.modura_server.domain.place.entity.Place;
+import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ContentConverter {
@@ -96,6 +99,30 @@ public class ContentConverter {
                 .rating(review.getRating() != null ? review.getRating() : 0)
                 .comment(review.getBody() != null ? review.getBody() : "")
                 .createdAt(review.getCreatedAt() != null ? review.getCreatedAt().toString() : "")
+                .build();
+    }
+
+    public static ContentResponseDTO.GetTopContentDTO toGetTopContentDTO(Content content, boolean isLiked) {
+
+        return ContentResponseDTO.GetTopContentDTO.builder()
+                .id(content.getId())
+                .title(content.getTitleKr())
+                .isLiked(isLiked)
+                .thumbnail(content.getThumbnail())
+                .build();
+    }
+
+    public static ContentResponseDTO.GetTopContentListDTO toGetTopContentListDTO(List<Content> contentList, Set<Long> likedContentIds){
+
+        List<ContentResponseDTO.GetTopContentDTO> contentDTOList = contentList.stream()
+                .map(content -> {
+                    boolean isLiked = likedContentIds.contains(content.getId());
+                    return toGetTopContentDTO(content, isLiked);
+                })
+                .collect(Collectors.toList());
+
+        return ContentResponseDTO.GetTopContentListDTO.builder()
+                .contentList(contentDTOList)
                 .build();
     }
 }

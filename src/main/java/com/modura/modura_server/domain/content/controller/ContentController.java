@@ -4,11 +4,13 @@ import com.modura.modura_server.domain.content.dto.ContentRequestDTO;
 import com.modura.modura_server.domain.content.dto.ContentResponseDTO;
 import com.modura.modura_server.domain.content.service.ContentCommandService;
 import com.modura.modura_server.domain.content.service.ContentQueryService;
+import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 import com.modura.modura_server.global.response.ApiResponse;
 import com.modura.modura_server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -103,5 +105,15 @@ public class ContentController {
         Long userId = userDetails.getUser().getId();
         contentCommandService.deleteContentReview(contentId, reviewId, userId);
         return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "TOP 10 컨텐츠 조회")
+    @GetMapping("/top")
+    public ApiResponse<ContentResponseDTO.GetTopContentListDTO> getTopContent(@AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        ContentResponseDTO.GetTopContentListDTO response = contentQueryService.getTopContent(userId);
+
+        return ApiResponse.onSuccess(response);
     }
 }

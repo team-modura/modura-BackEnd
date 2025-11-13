@@ -1,5 +1,6 @@
 package com.modura.modura_server.domain.content.dto;
 
+import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 import lombok.*;
 import java.util.List;
 
@@ -63,5 +64,26 @@ public class ContentResponseDTO {
         private Integer oneStarCount;
         private List<ReviewItemDTO> reviews;
         private List<StillCutPlaceItemDTO> places;
+    }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetTopContentDTO {
+
+        Long id;
+        String title;
+        Boolean isLiked;
+        String thumbnail;
+    }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetTopContentListDTO {
+
+        List<GetTopContentDTO> contentList;
     }
 }
