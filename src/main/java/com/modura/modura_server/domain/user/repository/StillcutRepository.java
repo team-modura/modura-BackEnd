@@ -11,6 +11,7 @@ import java.util.List;
 public interface StillcutRepository extends JpaRepository<Stillcut, Long> {
 
     List<Stillcut> findByContentId(Long contentId);
+    List<Stillcut> findByPlaceId(Long placeId);
 
     @Query("SELECT s FROM Stillcut s JOIN FETCH s.place WHERE s.content IN :contents")
     List<Stillcut> findWithPlaceByContentIn(@Param("contents") List<Content> contents);

@@ -17,4 +17,6 @@ public interface ContentLikesRepository extends JpaRepository<ContentLikes, Long
 
   @Modifying
   void deleteByUserIdAndContentId(Long userId, Long contentId);
+
+  List<ContentLikes> findByUserIdAndContentIdIn(Long userId, List<Long> contentIds);
 }

@@ -94,4 +94,16 @@ public class PlaceController {
 
         return ApiResponse.onSuccess(response);
     }
+
+    @Operation(summary = "장소 상세 조회")
+    @GetMapping("/{placeId}/detail")
+    public ApiResponse<PlaceResponseDTO.GetPlaceDetailDTO> getPlaceDetail(
+            @PathVariable Long placeId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        PlaceResponseDTO.GetPlaceDetailDTO response = placeQueryService.getPlaceDetail(placeId, userId);
+
+        return ApiResponse.onSuccess(response);
+    }
 }
