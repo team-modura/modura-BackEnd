@@ -29,27 +29,4 @@ public class S3Controller {
         List<S3ResponseDTO.PresignedUrlResDTO> response = s3Service.generateUploadPresignedUrl(req);
         return ApiResponse.onSuccess(response);
     }
-
-
-    /**
-     * 조회용 Presigned URL 발급
-     * 프론트에서 비공개 이미지 조회 시 요청
-     */
-    @Operation(summary = "조회용 Presigned URL 발급")
-    @GetMapping("/presigned-view")
-    public ApiResponse<String> getPresignedViewUrl(
-            @RequestParam String key // 예: ingredient/uuid-filename.jpg
-    ) {
-        String viewUrl = s3Service.generateViewPresignedUrl(key);
-        return ApiResponse.onSuccess(viewUrl);
-    }
-
-
-    //이미지 삭제 (서버가 직접 삭제 요청)
-    @Operation(summary = "이미지 삭제")
-    @DeleteMapping("/file")
-    public ApiResponse<Void> deleteImage(@RequestParam String imageUrl) {
-        s3Service.deleteFile(imageUrl);
-        return ApiResponse.onSuccess(null);
-    }
 }
