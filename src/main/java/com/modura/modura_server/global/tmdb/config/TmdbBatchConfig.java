@@ -1,0 +1,161 @@
+package com.modura.modura_server.global.tmdb.config;
+
+import com.modura.modura_server.domain.content.entity.Content;
+import com.modura.modura_server.domain.content.repository.ContentRepository;
+import com.modura.modura_server.global.tmdb.client.TmdbApiClient;
+import com.modura.modura_server.global.tmdb.dto.TmdbMovieDetailResponseDTO;
+import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.item.Chunk;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.support.IteratorItemReader;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Configuration
+@RequiredArgsConstructor
+public class TmdbBatchConfig {
+
+    private final JobRepository jobRepository;
+    private final PlatformTransactionManager transactionManager;
+
+    private final TmdbApiClient tmdbApiClient;
+    private final ContentRepository contentRepository;
+
+    private static final int CHUNK_SIZE = 20; // 한 번에 처리(Write)할 항목 수
+    private static final int TOTAL_PAGES_TO_FETCH = 5; // 가져올 총 페이지 수
+    private static final long API_THROTTLE_MS = 100; // API 호출 간 딜레이
+    private static final String TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500";
+
+
+    // 1. Job 정의
+    @Bean
+    public Job tmdbSeedingJob() {
+        return new JobBuilder("tmdbSeedingJob", jobRepository)
+                .incrementer(new RunIdIncrementer()) // Job을 반복 실행할 수 있게 함
+                .start(tmdbSeedingStep()) // Step 실행
+                .build();
+    }
+
+    // 2. Step 정의
+    @Bean
+    public Step tmdbSeedingStep() {
+        return new StepBuilder("tmdbSeedingStep", jobRepository)
+                // <[Reader 타입], [Writer 타입]>
+                .<TmdbMovieResponseDTO.MovieResultDTO, Content>chunk(CHUNK_SIZE, transactionManager)
+                .reader(tmdbMovieItemReader())
+                .processor(tmdbMovieItemProcessor())
+                .writer(newContentItemWriter())
+                .build();
+    }
+
+    // 3. ItemReader 정의
+    @Bean
+    @StepScope
+    public ItemReader<TmdbMovieResponseDTO.MovieResultDTO> tmdbMovieItemReader() {
+
+        Queue<TmdbMovieResponseDTO.MovieResultDTO> movieQueue = new LinkedList<>();
+
+        for (int page = 1; page <= TOTAL_PAGES_TO_FETCH; page++) {
+            try {
+                log.info("Fetching TMDB page: {}", page);
+                TmdbMovieResponseDTO response = tmdbApiClient.fetchMovieDiscoverPage(page).block();
+                if (response != null && response.getResults() != null) {
+                    movieQueue.addAll(response.getResults());
+                }
+                Thread.sleep(API_THROTTLE_MS);
+            } catch (Exception e) {
+                log.warn("Failed to fetch page {} during reader initialization", page, e);
+            }
+        }
+        log.info("Total {} movie items to process.", movieQueue.size());
+
+        return new IteratorItemReader<>(movieQueue);
+    }
+
+    // 4. ItemProcessor 정의
+    @Bean
+    @StepScope
+    public ItemProcessor<TmdbMovieResponseDTO.MovieResultDTO, Content> tmdbMovieItemProcessor() {
+        return listDto -> {
+            TmdbMovieDetailResponseDTO detailDto = tmdbApiClient.fetchMovieDetails(listDto.getId()).block();
+
+            if (detailDto == null) {
+                log.warn("Skipping transformation due to missing data (listDto or detailDto) for tmdbId: {}", listDto.getId());
+                return null;
+            }
+
+            log.info("Transforming movie: {}", listDto.getTitle());
+            return Content.builder()
+                    .titleKr(listDto.getTitle())
+                    .titleEng(detailDto.getTitle())
+                    .year(parseYearFromDate(listDto.getReleaseDate()))
+                    .plot(listDto.getOverview())
+                    .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
+                    .runtime(detailDto.getRuntime())
+                    .type(1)
+                    .tmdbId(listDto.getId())
+                    .build();
+        };
+    }
+
+    // 5. ItemWriter 정의
+    @Bean
+    @StepScope
+    public ItemWriter<Content> newContentItemWriter() {
+        return (Chunk<? extends Content> chunk) -> {
+            List<? extends Content> items = chunk.getItems();
+
+            Set<Integer> incomingTmdbIds = items.stream()
+                    .map(Content::getTmdbId)
+                    .collect(Collectors.toSet());
+
+            Set<Integer> existingTmdbIds = contentRepository.findAllByTmdbIdIn(incomingTmdbIds)
+                    .stream()
+                    .map(Content::getTmdbId)
+                    .collect(Collectors.toSet());
+
+            List<Content> newContentList = items.stream()
+                    .filter(content -> !existingTmdbIds.contains(content.getTmdbId()))
+                    .collect(Collectors.toList());
+
+            if (!newContentList.isEmpty()) {
+                log.info("Saving {} new movie items to DB.", newContentList.size());
+                contentRepository.saveAll(newContentList);
+            } else {
+                log.info("No new movie items to save in this chunk.");
+            }
+        };
+    }
+
+    private Integer parseYearFromDate(String releaseDate) {
+
+        if (releaseDate == null || releaseDate.isBlank() || releaseDate.length() < 4) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(releaseDate.substring(0, 4));
+        } catch (NumberFormatException e) {
+            log.warn("Failed to parse year from release date: {}", releaseDate);
+            return null;
+        }
+    }
+}
