@@ -89,6 +89,12 @@ public class S3Service {
         return presignedGetObjectRequest.url().toString();
     }
 
+    public List<String> generateViewPresignedUrls(List<String> keys) {
+        return keys.stream()
+                .map(this::generateViewPresignedUrl)
+                .toList();
+    }
+
     // S3에서 이미지 삭제
     public void deleteFile(String imageUrl) {
         String key = extractKeyFromUrl(imageUrl);

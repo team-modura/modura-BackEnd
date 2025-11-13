@@ -60,8 +60,8 @@ public class PlaceController {
 
     @Operation(summary = "촬영지 리뷰 조회")
     @GetMapping("/{placeId}/reviews/{reviewId}")
-    public ApiResponse<PlaceResponseDTO.GetPlaceReviewDTO> getPlaceReview(@PathVariable Long placeId, @PathVariable Long reviewId) {
-        PlaceResponseDTO.GetPlaceReviewDTO response = placeQueryService.getPlaceReview(placeId, reviewId);
+    public ApiResponse<PlaceResponseDTO.ReviewItemDTO> getPlaceReview(@PathVariable Long placeId, @PathVariable Long reviewId) {
+        PlaceResponseDTO.ReviewItemDTO response = placeQueryService.getPlaceReview(placeId, reviewId);
 
         return ApiResponse.onSuccess(response);
     }

@@ -7,17 +7,19 @@ import com.modura.modura_server.domain.place.entity.PlaceReview;
 import java.util.List;
 
 public class PlaceConverter {
-    public static PlaceResponseDTO.GetPlaceReviewDTO toGetPlaceReviewDTO(PlaceReview placeReview, List<String> imageUrlList) {
+    public static PlaceResponseDTO.ReviewItemDTO toGetPlaceReviewDTO(PlaceReview placeReview, List<String> imageUrlList) {
 
-        return PlaceResponseDTO.GetPlaceReviewDTO.builder()
+        return PlaceResponseDTO.ReviewItemDTO.builder()
                 .placeReviewId(placeReview.getId())
+                .username(placeReview.getUser().getNickname())
                 .rating(placeReview.getRating())
                 .comment(placeReview.getBody())
                 .imageUrl(imageUrlList)
+                .createdAt(placeReview.getCreatedAt().toString())
                 .build();
     }
 
-    public static PlaceResponseDTO.GetPlaceReviewListDTO toGetPlaceReviewListDTO(List<PlaceResponseDTO.GetPlaceReviewDTO> placeReviewDTOList) {
+    public static PlaceResponseDTO.GetPlaceReviewListDTO toGetPlaceReviewListDTO(List<PlaceResponseDTO.ReviewItemDTO> placeReviewDTOList) {
 
         return PlaceResponseDTO.GetPlaceReviewListDTO.builder()
                 .placeReviewList(placeReviewDTOList)

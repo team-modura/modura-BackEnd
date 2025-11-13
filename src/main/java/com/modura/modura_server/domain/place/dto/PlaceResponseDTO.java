@@ -10,23 +10,13 @@ import java.util.List;
 
 public class PlaceResponseDTO {
 
-    @Builder
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class GetPlaceReviewDTO {
-        Long placeReviewId;
-        Integer rating;
-        String comment;
-        List<String> imageUrl;
-    }
 
     @Builder
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
     public static class GetPlaceReviewListDTO {
-        List<GetPlaceReviewDTO> placeReviewList;
+        List<ReviewItemDTO> placeReviewList;
     }
 
     @Builder
@@ -34,7 +24,6 @@ public class PlaceResponseDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class GetStillcutDTO {
-
         Long stillcutId;
         Long contentId;
         String title;
