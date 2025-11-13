@@ -19,15 +19,6 @@ public class TmdbJobScheduler {
     private final Job tmdbSeedingJob;
 
     /**
-     * 앱 시작 시 1회 즉시 실행
-     */
-    @PostConstruct
-    public void runJobOnStartup() {
-        log.info("Running TMDB seeding job on application startup...");
-        runJob();
-    }
-
-    /**
      * fixedDelay = 3600000: 직전 작업이 '종료'된 후 1시간 뒤 실행
      */
     @Scheduled(fixedDelay = 3600000) // 1시간

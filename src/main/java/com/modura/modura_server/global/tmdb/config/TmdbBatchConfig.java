@@ -15,7 +15,6 @@ import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.Chunk;
-import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.IteratorItemReader;
@@ -23,10 +22,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -59,10 +55,8 @@ public class TmdbBatchConfig {
     @Bean
     public Step tmdbSeedingStep() {
         return new StepBuilder("tmdbSeedingStep", jobRepository)
-                // <[Reader 타입], [Writer 타입]>
-                .<TmdbMovieResponseDTO.MovieResultDTO, Content>chunk(CHUNK_SIZE, transactionManager)
+                .<TmdbMovieResponseDTO.MovieResultDTO, TmdbMovieResponseDTO.MovieResultDTO>chunk(CHUNK_SIZE, transactionManager)
                 .reader(tmdbMovieItemReader())
-                .processor(tmdbMovieItemProcessor())
                 .writer(newContentItemWriter())
                 .build();
     }
@@ -91,20 +85,54 @@ public class TmdbBatchConfig {
         return new IteratorItemReader<>(movieQueue);
     }
 
-    // 4. ItemProcessor 정의
+    // 4. ItemWriter 정의
     @Bean
     @StepScope
-    public ItemProcessor<TmdbMovieResponseDTO.MovieResultDTO, Content> tmdbMovieItemProcessor() {
-        return listDto -> {
+    public ItemWriter<TmdbMovieResponseDTO.MovieResultDTO> newContentItemWriter() {
+        return (Chunk<? extends TmdbMovieResponseDTO.MovieResultDTO> chunk) -> {
+
+            // 1. 현재 청크에 포함된 모든 tmdbId 조회
+            Set<Integer> incomingTmdbIds = chunk.getItems().stream()
+                    .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
+                    .collect(Collectors.toSet());
+
+            // 2. DB 조회를 1번만 실행하여, 이미 존재하는 tmdbId 목록 조회 (성능 핵심)
+            Set<Integer> existingTmdbIds = contentRepository.findAllByTmdbIdIn(incomingTmdbIds)
+                    .stream()
+                    .map(Content::getTmdbId)
+                    .collect(Collectors.toSet());
+
+            // 3. [필터링 -> API 호출 -> 변환] 작업을 Stream으로 처리
+            List<Content> newContentList = chunk.getItems().stream()
+                    .filter(listDto -> !existingTmdbIds.contains(listDto.getId()))
+                    .map(this::fetchDetailsAndBuildContent)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toList());
+
+            // 4. 새로운 영화가 있을 경우에만 DB에 일괄 저장
+            if (!newContentList.isEmpty()) {
+                log.info("Saving {} new movie items to DB.", newContentList.size());
+                contentRepository.saveAll(newContentList);
+            } else {
+                log.info("No new movie items to save in this chunk.");
+            }
+        };
+    }
+
+    private Optional<Content> fetchDetailsAndBuildContent(TmdbMovieResponseDTO.MovieResultDTO listDto) {
+        try {
+            // 4-1. 상세 정보 API 호출
             TmdbMovieDetailResponseDTO detailDto = tmdbApiClient.fetchMovieDetails(listDto.getId()).block();
+            Thread.sleep(API_THROTTLE_MS); // API Throttling
 
             if (detailDto == null) {
-                log.warn("Skipping transformation due to missing data (listDto or detailDto) for tmdbId: {}", listDto.getId());
-                return null;
+                log.warn("Skipping transformation due to missing detail data for new tmdbId: {}", listDto.getId());
+                return Optional.empty();
             }
 
-            log.info("Transforming movie: {}", listDto.getTitle());
-            return Content.builder()
+            // 4-3. Content 엔티티 빌드
+            Content content = Content.builder()
                     .titleKr(listDto.getTitle())
                     .titleEng(detailDto.getTitle())
                     .year(parseYearFromDate(listDto.getReleaseDate()))
@@ -114,36 +142,12 @@ public class TmdbBatchConfig {
                     .type(1)
                     .tmdbId(listDto.getId())
                     .build();
-        };
-    }
 
-    // 5. ItemWriter 정의
-    @Bean
-    @StepScope
-    public ItemWriter<Content> newContentItemWriter() {
-        return (Chunk<? extends Content> chunk) -> {
-            List<? extends Content> items = chunk.getItems();
-
-            Set<Integer> incomingTmdbIds = items.stream()
-                    .map(Content::getTmdbId)
-                    .collect(Collectors.toSet());
-
-            Set<Integer> existingTmdbIds = contentRepository.findAllByTmdbIdIn(incomingTmdbIds)
-                    .stream()
-                    .map(Content::getTmdbId)
-                    .collect(Collectors.toSet());
-
-            List<Content> newContentList = items.stream()
-                    .filter(content -> !existingTmdbIds.contains(content.getTmdbId()))
-                    .collect(Collectors.toList());
-
-            if (!newContentList.isEmpty()) {
-                log.info("Saving {} new movie items to DB.", newContentList.size());
-                contentRepository.saveAll(newContentList);
-            } else {
-                log.info("No new movie items to save in this chunk.");
-            }
-        };
+            return Optional.of(content);
+        } catch (Exception e) {
+            log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
+            return Optional.empty();
+        }
     }
 
     private Integer parseYearFromDate(String releaseDate) {
