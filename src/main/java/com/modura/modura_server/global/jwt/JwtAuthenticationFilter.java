@@ -18,7 +18,7 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -47,9 +47,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean isTokenBlacklisted(String token) {
-        Object isBlacklisted = redisTemplate.opsForValue().get(token);
+        String isBlacklisted = redisTemplate.opsForValue().get(token);
         // "logout" 문자열이 있는지 확인
-        return StringUtils.hasText((String) isBlacklisted);
+        return StringUtils.hasText(isBlacklisted);
     }
 
     private void setAuthentication(String token) {

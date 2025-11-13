@@ -26,7 +26,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
     private final WebClient webClient;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
 
     private static final String KAKAO_USER_INFO_URI = "https://kapi.kakao.com/v2/user/me";
     private static final String REFRESH_TOKEN_PREFIX = "RT:";
@@ -105,7 +105,9 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         User user = userRepository.findById(Long.parseLong(userId))
                 .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        return generateAndSaveTokens(user, false);
+        boolean isNewUser = (user.getAddress() == null);
+
+        return generateAndSaveTokens(user, isNewUser);
     }
 
     private AuthResponseDTO.GetUserDTO generateAndSaveTokens(User user, boolean isNewUser) {
@@ -164,13 +166,11 @@ public class AuthCommandServiceImpl implements AuthCommandService {
 
     private void validateRefreshToken(String userId, String clientRefreshToken) {
 
-        Object storedTokenObj = redisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + userId);
+        String storedRefreshToken = redisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + userId);
 
-        if (storedTokenObj == null) {
+        if (storedRefreshToken == null) {
             throw new BusinessException(ErrorStatus.REFRESH_TOKEN_NOT_FOUND);
         }
-
-        String storedRefreshToken = String.valueOf(storedTokenObj);
 
         if (!storedRefreshToken.equals(clientRefreshToken)) {
             // 토큰 불일치 시 탈취로 간주하고 즉시 삭제
