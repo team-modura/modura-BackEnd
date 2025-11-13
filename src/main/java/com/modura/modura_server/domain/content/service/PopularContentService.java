@@ -5,7 +5,6 @@ import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.repository.*;
 import com.modura.modura_server.global.tmdb.client.TmdbApiClient;
 import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,13 +16,11 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class PopularContentService {
 
     private final TmdbApiClient tmdbApiClient;
     private final ContentRepository contentRepository;
 
-    @Qualifier("redisCacheTemplate")
     private final RedisTemplate<String, Object> redisCacheTemplate;
 
     private static final String CACHE_KEY = "popular:content";
@@ -32,6 +29,14 @@ public class PopularContentService {
     private static final int TARGET_COUNT = 10;
     private static final int MAX_PAGES_TO_FETCH = 5;
     private static final int FETCH_BUFFER_MULTIPLIER = 3;
+
+    public PopularContentService(TmdbApiClient tmdbApiClient,
+                                 ContentRepository contentRepository,
+                                 @Qualifier("redisCacheTemplate") RedisTemplate<String, Object> redisCacheTemplate) {
+        this.tmdbApiClient = tmdbApiClient;
+        this.contentRepository = contentRepository;
+        this.redisCacheTemplate = redisCacheTemplate;
+    }
 
     public List<PopularContentCacheDTO> getPopularContent() {
         try {
@@ -50,14 +55,33 @@ public class PopularContentService {
 
     public void refreshPopularContent() {
         log.info("Starting to refresh popular content cache...");
+
+        // 1. TMDB에서 인기 영화 ID 목록 조회
+        List<Integer> allTmdbIds = fetchPopularTmdbIdsFromAPI();
+        if (allTmdbIds.isEmpty()) {
+            log.warn("Failed to fetch any popular movies from TMDB. Cache refresh aborted.");
+            return;
+        }
+
+        // 2. DB에 존재하는 영화만 필터링 및 DTO 변환
+        List<PopularContentCacheDTO> popularContents = filterAndTransformToCacheDTO(allTmdbIds);
+        if (popularContents.isEmpty()) {
+            log.warn("No popular contents found in our DB from the fetched TMDB list. Cache will not be updated.");
+            return;
+        }
+
+        // 3. Redis에 캐시 저장
+        saveContentsToCache(popularContents);
+    }
+
+    private List<Integer> fetchPopularTmdbIdsFromAPI() {
         List<Integer> allTmdbIds = new ArrayList<>();
 
         for (int page = 1; page <= MAX_PAGES_TO_FETCH; page++) {
+            if (allTmdbIds.size() >= TARGET_COUNT * FETCH_BUFFER_MULTIPLIER) {
+                break;
+            }
             try {
-                if (allTmdbIds.size() >= TARGET_COUNT * FETCH_BUFFER_MULTIPLIER) {
-                    break;
-                }
-
                 TmdbMovieResponseDTO response = tmdbApiClient.fetchMovieDiscoverPage(page).block();
 
                 if (response != null && response.getResults() != null) {
@@ -71,32 +95,37 @@ public class PopularContentService {
                 log.warn("Failed to fetch popular movies page {}. Skipping. Error: {}", page, e.getMessage());
             }
         }
+        return allTmdbIds;
+    }
 
-        if (allTmdbIds.isEmpty()) {
-            log.warn("Failed to fetch any popular movies from TMDB. Cache refresh aborted.");
-            return;
-        }
+    private List<PopularContentCacheDTO> filterAndTransformToCacheDTO(List<Integer> allTmdbIds) {
 
         List<Content> contentsFromDb = contentRepository.findAllByTmdbIdIn(allTmdbIds);
         Map<Integer, Content> contentMap = contentsFromDb.stream()
                 .collect(Collectors.toMap(Content::getTmdbId, content -> content));
 
-        // Content 엔티티 리스트를 -> PopularContentCacheDTO 리스트로 변환
-        List<PopularContentCacheDTO> orderedExistingContents = allTmdbIds.stream()
-                .map(contentMap::get)
-                .filter(Objects::nonNull)
-                .limit(TARGET_COUNT)
-                .map(content -> PopularContentCacheDTO.builder() // 엔티티를 캐시 DTO로 변환
-                        .id(content.getId())
-                        .titleKr(content.getTitleKr())
-                        .thumbnail(content.getThumbnail())
-                        .build())
+        return allTmdbIds.stream()
+                .map(contentMap::get)           // DB에 있는 Content 객체 찾기
+                .filter(Objects::nonNull)       // DB에 없는 것(null) 제외
+                .limit(TARGET_COUNT)            // 최종 10개로 제한
+                .map(this::convertToCacheDTO)   // 캐시 DTO로 변환
                 .collect(Collectors.toList());
+    }
 
-        // 4. Redis 캐시 교체
+    private PopularContentCacheDTO convertToCacheDTO(Content content) {
+
+        return PopularContentCacheDTO.builder()
+                .id(content.getId())
+                .titleKr(content.getTitleKr())
+                .thumbnail(content.getThumbnail())
+                .build();
+    }
+
+    private void saveContentsToCache(List<PopularContentCacheDTO> contents) {
+
         try {
-            redisCacheTemplate.opsForValue().set(CACHE_KEY, orderedExistingContents, CACHE_DURATION);
-            log.info("Popular content cache refreshed successfully. Total {} items.", orderedExistingContents.size());
+            redisCacheTemplate.opsForValue().set(CACHE_KEY, contents, CACHE_DURATION);
+            log.info("Popular content cache refreshed successfully. Total {} items.", contents.size());
         } catch (Exception e) {
             log.error("Failed to save popular content to Redis cache", e);
         }
