@@ -1,9 +1,6 @@
 package com.modura.modura_server.domain.place.dto;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -36,6 +33,7 @@ public class PlaceRequestDTO {
         @Max(value = 5)
         private Integer rating;
 
+        @Size(min = 1, message = "리뷰 내용은 최소 1자 이상이어야 합니다.")
         private String comment;
     }
 
@@ -44,6 +42,7 @@ public class PlaceRequestDTO {
     @Getter
     @NoArgsConstructor
     public static class ImageKeysDTO {
+        @NotEmpty(message = "이미지 키 목록은 비어있을 수 없습니다.")
         private List<String> imageKeys;
     }
 

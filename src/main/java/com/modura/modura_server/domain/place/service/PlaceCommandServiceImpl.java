@@ -142,7 +142,6 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
             throw new BusinessException(ErrorStatus.BAD_REQUEST);
         }
 
-        placeReviewRepository.save(placeReview);
     }
 
     @Override
@@ -185,10 +184,6 @@ public class PlaceCommandServiceImpl implements PlaceCommandService {
     public void deletePlaceReview(Long userId, Long placeId, Long placeReviewId) {
         PlaceReview placeReview = placeReviewRepository.findByIdAndPlaceIdAndUserId(placeReviewId, placeId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
-
-        if(!placeReview.getUser().getId().equals(userId) || !placeReview.getPlace().getId().equals(placeId)) {
-            throw new BusinessException(ErrorStatus.FORBIDDEN);
-        }
 
         List<ReviewImage> reviewImages = reviewImageRepository.findByPlaceReviewId(placeReviewId);
         List<String> imageKeys = reviewImages.stream()
