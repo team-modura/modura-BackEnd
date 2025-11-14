@@ -16,6 +16,10 @@ spring:
         format_sql: true # SQL 쿼리를 보기 좋게 포맷팅
     defer-datasource-initialization: true # 데이터 초기화 지연
 
+  task:
+    scheduling:
+      enabled: false
+
 logging:
   level:
     org.hibernate.SQL: debug # 실행되는 SQL 쿼리 로그로 확인
