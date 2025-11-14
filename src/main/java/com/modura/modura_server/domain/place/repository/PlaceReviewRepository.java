@@ -23,4 +23,6 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
 
     Optional<PlaceReview> findByIdAndPlaceIdAndUserId(Long placeReviewId, Long placeId, Long userId);
 
+    @Query("SELECT pr FROM PlaceReview pr JOIN FETCH pr.place p WHERE pr.user.id = :userId")
+    List<PlaceReview> findAllByUserIdWithPlace(@Param("userId") Long userId);
 }

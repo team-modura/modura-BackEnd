@@ -21,4 +21,10 @@ public interface ContentReviewRepository extends JpaRepository<ContentReview, Lo
     List<ContentReview> findByContent(@Param("content") Content content);
 
     Optional<ContentReview> findByIdAndContent(Long reviewId, Content content);
+
+    @Query("SELECT cr FROM ContentReview cr JOIN FETCH cr.content c WHERE cr.user.id = :userId")
+    List<ContentReview> findAllByUserIdWithContent(@Param("userId") Long userId);
+
+    @Query("SELECT cr FROM ContentReview cr JOIN FETCH cr.content c WHERE cr.user.id = :userId AND c.type = :contentType")
+    List<ContentReview> findAllByUserIdAndContentTypeWithContent(@Param("userId") Long userId, @Param("contentType") Integer contentType);
 }

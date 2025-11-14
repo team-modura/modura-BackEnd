@@ -24,8 +24,8 @@ public enum ErrorStatus implements BaseCode {
 
     // 카테고리 관련 에러
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY4001", "카테고리를 찾을 수 없습니다."),
-  
-   // 컨텐츠 관련 에러
+
+    // 컨텐츠 관련 에러
     CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTENT4001", "컨텐츠가 없습니다."),
     CONTENT_REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTENT4002", "컨텐츠 리뷰가 없습니다."),
 
@@ -43,7 +43,10 @@ public enum ErrorStatus implements BaseCode {
     REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "AUTH4002", "로그인 정보가 만료되었습니다."),
     REFRESH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH4003", "Refresh Token이 만료되었습니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH4004", "유효하지 않은 토큰입니다."),
-    REFRESH_TOKEN_MISMATCH(HttpStatus.FORBIDDEN, "AUTH4005", "Refresh Token이 일치하지 않습니다.")
+    REFRESH_TOKEN_MISMATCH(HttpStatus.FORBIDDEN, "AUTH4005", "Refresh Token이 일치하지 않습니다."),
+
+    // 리뷰 관련 에러
+    INVALID_REVIEW_TYPE(HttpStatus.BAD_REQUEST, "REVIEW4001", "유효하지 않은 리뷰 타입입니다."),
 
     ;
 
