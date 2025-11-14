@@ -6,4 +6,5 @@ public interface SearchQueryService {
 
     SearchResponseDTO.SearchContentListDTO searchContent(Long userId, String query);
     SearchResponseDTO.SearchPlaceListDTO searchPlace(Long userId, String query);
+    SearchResponseDTO.GetPopularKeywordDTO getPopularKeyword();
 }
