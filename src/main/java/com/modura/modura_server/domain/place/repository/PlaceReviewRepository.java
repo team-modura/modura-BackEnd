@@ -20,4 +20,7 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
 
     @Query("SELECT COUNT(pr) FROM PlaceReview pr WHERE pr.place.id = :placeId")
     Integer countByPlace(@Param("placeId") Long placeId);
+
+    Optional<PlaceReview> findByIdAndPlaceIdAndUserId(Long placeReviewId, Long placeId, Long userId);
+
 }

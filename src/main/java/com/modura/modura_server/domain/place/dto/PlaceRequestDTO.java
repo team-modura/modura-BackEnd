@@ -31,6 +31,26 @@ public class PlaceRequestDTO {
     @AllArgsConstructor
     @Getter
     @NoArgsConstructor
+    public static class PatchPlaceReviewDTO {
+        @Min(value = 1)
+        @Max(value = 5)
+        private Integer rating;
+
+        private String comment;
+    }
+
+    @Builder
+    @AllArgsConstructor
+    @Getter
+    @NoArgsConstructor
+    public static class ImageKeysDTO {
+        private List<String> imageKeys;
+    }
+
+    @Builder
+    @AllArgsConstructor
+    @Getter
+    @NoArgsConstructor
     public static class PostStillcutDTO {
 
         @NotBlank(message = "이미지 URL은 필수입니다.")

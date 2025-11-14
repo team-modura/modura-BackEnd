@@ -25,9 +25,11 @@ public class PlaceReview extends BaseEntity {
     @JoinColumn(name = "place_id", nullable = false)
     private Place place;
 
+    @Setter
     @Column(name = "body", nullable = false)
     private String body;
 
+    @Setter
     @Column(name = "rating", nullable = false)
     private Integer rating;
 }
