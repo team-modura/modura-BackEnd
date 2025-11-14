@@ -24,7 +24,7 @@ public class PlaceController {
     private final PlaceCommandService placeCommandService;
     private final PlaceQueryService placeQueryService;
 
-    @Operation(summary = "장소 찜 하기")
+    @Operation(summary = "촬영지 찜 하기")
     @PostMapping("{placeId}/like")
     public ApiResponse<Void> postLikePlace(
             @PathVariable(value="placeId") Long placeId,
@@ -35,7 +35,7 @@ public class PlaceController {
         return ApiResponse.onSuccess(null);
     }
 
-    @Operation(summary = "장소 찜 취소")
+    @Operation(summary = "촬영지 찜하기 취소")
     @DeleteMapping("{placeId}/unlike")
     public ApiResponse<Void> deletelikePlace(
             @PathVariable(value="placeId") Long placeId,
@@ -66,12 +66,59 @@ public class PlaceController {
         return ApiResponse.onSuccess(response);
     }
 
-    @Operation(summary = "촬영지 리뷰 목록 조회")
+    @Operation(summary = "촬영지 리뷰 전체 조회")
     @GetMapping("/{placeId}/reviews")
     public ApiResponse<PlaceResponseDTO.GetPlaceReviewListDTO> getPlaceReviewList(@PathVariable Long placeId) {
 
         PlaceResponseDTO.GetPlaceReviewListDTO response = placeQueryService.getPlaceReviewList(placeId);
         return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(summary = "촬영지 리뷰 수정")
+    @PatchMapping("/{placeId}/reviews/{reviewId}")
+    public ApiResponse<Void> patchPlaceReview(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                              @PathVariable Long placeId, @PathVariable Long reviewId,
+                                              @Valid @RequestBody PlaceRequestDTO.PatchPlaceReviewDTO request) {
+
+        Long userId = userDetails.getUser().getId();
+        placeCommandService.patchPlaceReview(userId, placeId, reviewId, request);
+
+        return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "촬영지 리뷰 이미지 추가")
+    @PatchMapping("/{placeId}/reviews/{reviewId}/images")
+    public ApiResponse<Void> patchPlaceReviewImages(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                    @PathVariable Long placeId, @PathVariable Long reviewId,
+                                                    @Valid @RequestBody PlaceRequestDTO.ImageKeysDTO imageKeys) {
+
+        Long userId = userDetails.getUser().getId();
+        placeCommandService.patchPlaceReviewImages(userId, placeId, reviewId, imageKeys);
+
+        return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "촬영지 리뷰 이미지 삭제")
+    @DeleteMapping("/{placeId}/reviews/{reviewId}/images")
+    public ApiResponse<Void> deletePlaceReviewImages(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                     @PathVariable Long placeId, @PathVariable Long reviewId,
+                                                     @Valid @RequestBody  PlaceRequestDTO.ImageKeysDTO imageKeys) {
+
+        Long userId = userDetails.getUser().getId();
+        placeCommandService.deletePlaceReviewImages(userId, placeId, reviewId, imageKeys);
+
+        return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "촬영지 리뷰 삭제")
+    @DeleteMapping("/{placeId}/reviews/{reviewId}")
+    public ApiResponse<Void> deletePlaceReview(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                               @PathVariable Long placeId, @PathVariable Long reviewId) {
+
+        Long userId = userDetails.getUser().getId();
+        placeCommandService.deletePlaceReview(userId, placeId, reviewId);
+
+        return ApiResponse.onSuccess(null);
     }
 
     @Operation(summary = "촬영지 스틸컷 조회")
@@ -95,7 +142,7 @@ public class PlaceController {
         return ApiResponse.onSuccess(response);
     }
 
-    @Operation(summary = "장소 상세 조회")
+    @Operation(summary = "촬영지 상세보기 조회")
     @GetMapping("/{placeId}/detail")
     public ApiResponse<PlaceResponseDTO.GetPlaceDetailDTO> getPlaceDetail(
             @PathVariable Long placeId,

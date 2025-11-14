@@ -96,13 +96,20 @@ public class S3Service {
     }
 
     // S3에서 이미지 삭제
-    public void deleteFile(String imageUrl) {
-        String key = extractKeyFromUrl(imageUrl);
-
+    public void deleteFile(String key) {
         s3Client.deleteObject(DeleteObjectRequest.builder()
                 .bucket(bucket)
                 .key(key)
                 .build());
+    }
+
+    public void deleteAll(List<String> key) {
+        for (String imageKey : key) {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(imageKey)
+                    .build());
+        }
     }
 
     /**
