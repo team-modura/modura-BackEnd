@@ -9,4 +9,5 @@ public interface UserQueryService {
     SearchResponseDTO.SearchPlaceListDTO getLikedPlace(Long userId);
     UserResponseDTO.GetMyStillcutListDTO getMyStillcutList(Long userId);
     UserResponseDTO.GetMyStillcutDetailDTO getMyStillcutDetail(Long userId, Long stillcutId);
+    UserResponseDTO.GetReviewListDTO getReview(Long userId, String type);
 }

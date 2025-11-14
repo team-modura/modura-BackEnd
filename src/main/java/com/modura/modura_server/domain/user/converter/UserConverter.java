@@ -1,12 +1,13 @@
 package com.modura.modura_server.domain.user.converter;
 
 import com.modura.modura_server.domain.content.entity.Content;
+import com.modura.modura_server.domain.content.entity.ContentReview;
 import com.modura.modura_server.domain.place.dto.PlaceResponseDTO;
 import com.modura.modura_server.domain.place.entity.Place;
+import com.modura.modura_server.domain.place.entity.PlaceReview;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 import com.modura.modura_server.domain.user.dto.UserResponseDTO;
 import com.modura.modura_server.domain.user.entity.Stillcut;
-import com.modura.modura_server.domain.user.entity.UserStillcut;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -69,6 +70,40 @@ public class UserConverter {
 
         return UserResponseDTO.GetMyStillcutListDTO.builder()
                 .stillcutList(stillcutDTOList)
+                .build();
+    }
+
+    public static UserResponseDTO.GetContentReviewDTO toGetContentReviewDTO(ContentReview review) {
+
+        return UserResponseDTO.GetContentReviewDTO.builder()
+                .id(review.getId())
+                .username(review.getUser().getNickname())
+                .rating(review.getRating())
+                .comment(review.getBody())
+                .createdAt(review.getCreatedAt().toString())
+                .thumbnail(review.getContent().getThumbnail())
+                .build();
+    }
+
+    public static UserResponseDTO.GetPlaceReviewDTO toGetPlaceReviewDTO(PlaceReview review, List<String> imageUrlList) {
+
+        return UserResponseDTO.GetPlaceReviewDTO.builder()
+                .id(review.getId())
+                .username(review.getUser().getNickname())
+                .rating(review.getRating())
+                .comment(review.getBody())
+                .imageUrl(imageUrlList)
+                .createdAt(review.getCreatedAt().toString())
+                .thumbnail(review.getPlace().getThumbnail())
+                .build();
+    }
+
+    public static UserResponseDTO.GetReviewListDTO toGetReviewListDTO(List<UserResponseDTO.GetContentReviewDTO> contentReviewList,
+                                                                      List<UserResponseDTO.GetPlaceReviewDTO> placeReviewList) {
+
+        return UserResponseDTO.GetReviewListDTO.builder()
+                .contentReviewList(contentReviewList)
+                .placeReviewList(placeReviewList)
                 .build();
     }
 }

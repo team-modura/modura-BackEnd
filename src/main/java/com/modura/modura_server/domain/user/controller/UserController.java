@@ -78,4 +78,15 @@ public class UserController {
 
         return ApiResponse.onSuccess(response);
     }
+
+    @Operation(summary = "작성한 리뷰 조회")
+    @GetMapping("/reviews")
+    public ApiResponse<UserResponseDTO.GetReviewListDTO> getReview(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                               @RequestParam(name = "type") @NotBlank String type) {
+
+        Long userId = userDetails.getUser().getId();
+        UserResponseDTO.GetReviewListDTO response = userQueryService.getReview(userId, type);
+
+        return ApiResponse.onSuccess(response);
+    }
 }

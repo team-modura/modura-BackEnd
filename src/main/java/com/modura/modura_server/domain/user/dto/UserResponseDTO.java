@@ -41,4 +41,43 @@ public class UserResponseDTO {
         String name;
         String date;
     }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetContentReviewDTO {
+
+        Long id;
+        String username;
+        Integer rating;
+        String comment;
+        String createdAt;
+        String thumbnail;
+    }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetPlaceReviewDTO {
+
+        Long id;
+        String username;
+        Integer rating;
+        String comment;
+        List<String> imageUrl;
+        String createdAt;
+        String thumbnail;
+    }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetReviewListDTO {
+
+        List<GetContentReviewDTO> contentReviewList;
+        List<GetPlaceReviewDTO> placeReviewList;
+    }
 }
