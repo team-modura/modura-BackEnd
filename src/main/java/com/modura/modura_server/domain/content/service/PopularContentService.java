@@ -82,7 +82,8 @@ public class PopularContentService {
                 break;
             }
             try {
-                TmdbMovieResponseDTO response = tmdbApiClient.fetchMovieDiscoverPage(page).block();
+                TmdbMovieResponseDTO response = tmdbApiClient.fetchMovieDiscoverPage(page)
+                        .block(Duration.ofSeconds(10));
 
                 if (response != null && response.getResults() != null) {
                     allTmdbIds.addAll(
@@ -101,9 +102,14 @@ public class PopularContentService {
     private List<PopularContentCacheDTO> filterAndTransformToCacheDTO(List<Integer> allTmdbIds) {
 
         List<Content> contentsFromDb = contentRepository.findAllByTmdbIdIn(allTmdbIds);
-        Map<Integer, Content> contentMap = contentsFromDb.stream()
-                .collect(Collectors.toMap(Content::getTmdbId, content -> content));
 
+        Map<Integer, Content> contentMap = contentsFromDb.stream()
+                .collect(Collectors.toMap(
+                        Content::getTmdbId,
+                        content -> content,
+                        (existing, replacement) -> existing
+                ));
+        
         return allTmdbIds.stream()
                 .map(contentMap::get)           // DB에 있는 Content 객체 찾기
                 .filter(Objects::nonNull)       // DB에 없는 것(null) 제외

@@ -3,9 +3,7 @@ package com.modura.modura_server.global.tmdb.runner;
 import com.modura.modura_server.domain.content.service.PopularContentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -25,22 +23,28 @@ public class TmdbJobScheduler {
     @Scheduled(fixedDelay = 3600000) // 1시간
     public void runJobPeriodically() {
         log.info("Running periodic TMDB seeding job...");
-        runJob();
+        boolean jobSuccess = runJob();
 
-        log.info("Running periodic popular content cache refresh...");
-        popularContentService.refreshPopularContent();
+        if (jobSuccess) {
+            log.info("Running periodic popular content cache refresh...");
+            popularContentService.refreshPopularContent();
+        } else {
+            log.warn("Skipping cache refresh due to job failure");
+        }
     }
 
-    private void runJob() {
+    private boolean runJob() {
         try {
             JobParameters jobParameters = new JobParametersBuilder()
                     .addLong("timestamp", System.currentTimeMillis())
                     .toJobParameters();
 
-            jobLauncher.run(tmdbSeedingJob, jobParameters);
+            JobExecution execution = jobLauncher.run(tmdbSeedingJob, jobParameters);
+            return execution.getStatus() == BatchStatus.COMPLETED;
 
         } catch (Exception e) {
             log.error("Failed to run TMDB seeding job", e);
+            return false;
         }
     }
 }
