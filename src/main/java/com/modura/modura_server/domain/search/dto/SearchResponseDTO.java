@@ -50,4 +50,13 @@ public class SearchResponseDTO {
 
         List<SearchPlaceDTO> placeList;
     }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetPopularKeywordDTO {
+
+        List<String> keywords;
+    }
 }

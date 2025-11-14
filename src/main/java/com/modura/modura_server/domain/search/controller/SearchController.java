@@ -12,8 +12,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/search")
@@ -41,6 +39,15 @@ public class SearchController {
 
         Long userId = userDetails.getUser().getId();
         SearchResponseDTO.SearchPlaceListDTO response = searchQueryService.searchPlace(userId, query);
+
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(summary = "인기 검색어 조회")
+    @GetMapping("/popular")
+    public ApiResponse<SearchResponseDTO.GetPopularKeywordDTO> getPopularKeyword() {
+
+        SearchResponseDTO.GetPopularKeywordDTO response = searchQueryService.getPopularKeyword();
 
         return ApiResponse.onSuccess(response);
     }

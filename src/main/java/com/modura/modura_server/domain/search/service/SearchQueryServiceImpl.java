@@ -11,6 +11,7 @@ import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 import com.modura.modura_server.domain.user.entity.Stillcut;
 import com.modura.modura_server.domain.user.repository.StillcutRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,9 +27,16 @@ public class SearchQueryServiceImpl implements SearchQueryService {
     private final PlaceLikesRepository placeLikesRepository;
     private final StillcutRepository stillcutRepository;
 
+    private final SearchCommandService searchCommandService;
+    private final RedisTemplate<String, String> redisTemplate;
+
+    private static final String POPULAR_KEYWORD_KEY = "popular:keywords";
+
     @Override
     @Transactional(readOnly = true)
     public SearchResponseDTO.SearchContentListDTO searchContent(Long userId, String query) {
+
+        searchCommandService.incrementSearchKeyword(query);
 
         List<Content> contents = contentRepository.searchByTitleContaining(query);
 
@@ -52,6 +60,8 @@ public class SearchQueryServiceImpl implements SearchQueryService {
     @Transactional(readOnly = true)
     public SearchResponseDTO.SearchPlaceListDTO searchPlace(Long userId, String query) {
 
+        searchCommandService.incrementSearchKeyword(query);
+
         List<Place> placesByName = placeRepository.searchByNameContaining(query);
         List<Place> placesByContent = findPlacesByContentTitle(query);
         List<Place> combinedPlaces = combinePlaces(placesByName, placesByContent);
@@ -70,6 +80,19 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         Set<Long> likedPlaceIds = placeLikesRepository.findIdsByUserIdAndPlaceIds(userId, placeIds);
 
         return SearchConverter.toSearchPlaceListDTO(combinedPlaces, likedPlaceIds);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SearchResponseDTO.GetPopularKeywordDTO getPopularKeyword() {
+
+        // 스코어 높은 순으로 0위부터 4위까지 5개 조회
+        Set<String> keywords = redisTemplate.opsForZSet().reverseRange(POPULAR_KEYWORD_KEY, 0, 4);
+        List<String> keywordList = (keywords != null) ? new ArrayList<>(keywords) : Collections.emptyList();
+
+        return SearchResponseDTO.GetPopularKeywordDTO.builder()
+                .keywords(keywordList)
+                .build();
     }
 
     private List<Place> findPlacesByContentTitle(String query) {
