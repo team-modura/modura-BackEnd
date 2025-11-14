@@ -64,4 +64,25 @@ public class ContentResponseDTO {
         private List<ReviewItemDTO> reviews;
         private List<StillCutPlaceItemDTO> places;
     }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetTopContentDTO {
+
+        Long id;
+        String title;
+        Boolean isLiked;
+        String thumbnail;
+    }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetTopContentListDTO {
+
+        List<GetTopContentDTO> contentList;
+    }
 }

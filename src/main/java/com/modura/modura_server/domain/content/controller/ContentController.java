@@ -104,4 +104,14 @@ public class ContentController {
         contentCommandService.deleteContentReview(contentId, reviewId, userId);
         return ApiResponse.onSuccess(null);
     }
+
+    @Operation(summary = "TOP 10 컨텐츠 조회")
+    @GetMapping("/top")
+    public ApiResponse<ContentResponseDTO.GetTopContentListDTO> getTopContent(@AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        ContentResponseDTO.GetTopContentListDTO response = contentQueryService.getTopContent(userId);
+
+        return ApiResponse.onSuccess(response);
+    }
 }
