@@ -51,4 +51,14 @@ public class SearchController {
 
         return ApiResponse.onSuccess(response);
     }
+
+    @Operation(summary = "TOP 10 촬영지 조회")
+    @GetMapping("/places/top")
+    public ApiResponse<SearchResponseDTO.SearchPlaceListDTO> getTopPlace(@AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        SearchResponseDTO.SearchPlaceListDTO response = searchQueryService.getTopPlace(userId);
+
+        return ApiResponse.onSuccess(response);
+    }
 }

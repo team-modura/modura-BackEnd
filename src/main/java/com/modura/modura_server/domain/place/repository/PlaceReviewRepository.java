@@ -1,6 +1,7 @@
 package com.modura.modura_server.domain.place.repository;
 
 import com.modura.modura_server.domain.place.entity.PlaceReview;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,7 +10,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> {
+
     List<PlaceReview> findByPlaceId(Long placeId);
+
     Optional<PlaceReview> findByIdAndPlaceId(Long placeReviewId, Long placeId);
 
     @Query("SELECT COALESCE(ROUND(AVG(pr.rating), 1), 0) FROM PlaceReview pr WHERE pr.place.id = :placeId")
@@ -28,4 +31,7 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
 
     @Query("SELECT pr FROM PlaceReview pr WHERE pr.place.id IN :placeIds")
     List<PlaceReview> findByPlaceIdIn(@Param("placeIds") List<Long> placeIds);
+
+    @Query("SELECT pr.place.id FROM PlaceReview pr GROUP BY pr.place.id ORDER BY COUNT(pr.id) DESC")
+    List<Long> findTopPlaceIdsByReviewCount(Pageable pageable);
 }
