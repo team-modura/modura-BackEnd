@@ -88,7 +88,7 @@ public class TmdbBatchConfig {
     // 4. ItemWriter 정의
     @Bean
     @StepScope
-    public ItemWriter<TmdbMovieResponseDTO.MovieResultDTO> newContentItemWriter() {
+    public ItemWriter<TmdbMovieResponseDTO.MovieResultDTO> newMovieItemWriter() {
         return (Chunk<? extends TmdbMovieResponseDTO.MovieResultDTO> chunk) -> {
 
             // 1. 현재 청크에 포함된 모든 tmdbId 조회
@@ -139,7 +139,7 @@ public class TmdbBatchConfig {
                     .plot(listDto.getOverview())
                     .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
                     .runtime(detailDto.getRuntime())
-                    .type(1)
+                    .type(2)
                     .tmdbId(listDto.getId())
                     .build();
 
