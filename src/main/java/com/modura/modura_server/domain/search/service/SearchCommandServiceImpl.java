@@ -16,6 +16,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import scala.collection.Seq;
 
@@ -39,6 +40,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     private final ContentRepository contentRepository;
     private final TmdbBlacklistRepository tmdbBlacklistRepository;
     private final RedissonClient redissonClient;
+    private final TransactionTemplate transactionTemplate;
 
     private static final String POPULAR_KEYWORD_KEY = "popular:keywords";
     private static final int MIN_KEYWORD_LENGTH = 2;
@@ -150,7 +152,9 @@ public class SearchCommandServiceImpl implements SearchCommandService {
 
     @Transactional
     public void saveMoviesInTransaction(List<Content> movies) {
-        contentRepository.saveAll(movies);
+        transactionTemplate.executeWithoutResult(status -> {
+            contentRepository.saveAll(movies);
+        });
     }
 
     private List<TmdbMovieResponseDTO.MovieResultDTO> fetchPopularMovies() {
