@@ -1,4 +1,4 @@
-package com.modura.modura_server.domain.content.service;
+package com.modura.modura_server.domain.search.service;
 
 import com.modura.modura_server.domain.content.dto.PopularContentCacheDTO;
 import com.modura.modura_server.domain.content.entity.Content;
@@ -75,6 +75,7 @@ public class PopularContentService {
     }
 
     private List<Integer> fetchPopularTmdbIdsFromAPI() {
+
         List<Integer> allTmdbIds = new ArrayList<>();
 
         for (int page = 1; page <= MAX_PAGES_TO_FETCH; page++) {
@@ -82,7 +83,7 @@ public class PopularContentService {
                 break;
             }
             try {
-                TmdbMovieResponseDTO response = tmdbApiClient.fetchMovieDiscoverPage(page)
+                TmdbMovieResponseDTO response = tmdbApiClient.fetchPopularMovies(page)
                         .block(Duration.ofSeconds(10));
 
                 if (response != null && response.getResults() != null) {

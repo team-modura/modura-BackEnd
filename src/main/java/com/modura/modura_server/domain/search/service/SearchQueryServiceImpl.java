@@ -1,5 +1,6 @@
 package com.modura.modura_server.domain.search.service;
 
+import com.modura.modura_server.domain.content.dto.PopularContentCacheDTO;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.repository.ContentLikesRepository;
 import com.modura.modura_server.domain.content.repository.ContentRepository;
@@ -31,6 +32,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
     private final PlaceLikesRepository placeLikesRepository;
     private final StillcutRepository stillcutRepository;
     private final PlaceReviewRepository placeReviewRepository;
+    private final PopularContentService popularContentService;
 
     private final SearchCommandService searchCommandService;
     private final RedisTemplate<String, String> redisTemplate;
@@ -101,6 +103,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public SearchResponseDTO.SearchPlaceListDTO getTopPlace(Long userId) {
 
         Pageable topTen = PageRequest.of(0, 10);
@@ -125,6 +128,28 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         Set<Long> likedPlaceIds = placeLikesRepository.findIdsByUserIdAndPlaceIds(userId, topPlaceIds);
 
         return SearchConverter.toSearchPlaceListDTO(orderedPlaces, likedPlaceIds);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SearchResponseDTO.GetTopContentListDTO getTopMovie(Long userId) {
+
+        List<PopularContentCacheDTO> cachedContents = popularContentService.getPopularContent();
+
+        if (cachedContents.isEmpty()) {
+            return SearchResponseDTO.GetTopContentListDTO.builder()
+                    .contentList(Collections.emptyList())
+                    .build();
+        }
+
+        List<Long> contentIds = cachedContents.stream()
+                .map(PopularContentCacheDTO::getId)
+                .collect(Collectors.toList());
+
+        // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
+        Set<Long> likedContentIds = contentLikesRepository.findIdsByUserIdAndContentIds(userId, contentIds);
+
+        return SearchConverter.toGetTopContentListDTOFromCache(cachedContents, likedContentIds);
     }
 
     private List<Place> findPlacesByContentTitle(String query) {

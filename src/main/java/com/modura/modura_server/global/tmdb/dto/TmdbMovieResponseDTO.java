@@ -22,6 +22,7 @@ public class TmdbMovieResponseDTO {
     @Getter
     @NoArgsConstructor
     public static class MovieResultDTO {
+
         private Integer id;
         private String overview;
         private String title;

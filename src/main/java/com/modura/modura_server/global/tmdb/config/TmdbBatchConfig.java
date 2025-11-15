@@ -57,7 +57,7 @@ public class TmdbBatchConfig {
         return new StepBuilder("tmdbSeedingStep", jobRepository)
                 .<TmdbMovieResponseDTO.MovieResultDTO, TmdbMovieResponseDTO.MovieResultDTO>chunk(CHUNK_SIZE, transactionManager)
                 .reader(tmdbMovieItemReader())
-                .writer(newContentItemWriter())
+                .writer(newMovieItemWriter())
                 .build();
     }
 
@@ -70,14 +70,14 @@ public class TmdbBatchConfig {
 
         for (int page = 1; page <= TOTAL_PAGES_TO_FETCH; page++) {
             try {
-                log.info("Fetching TMDB page: {}", page);
-                TmdbMovieResponseDTO response = tmdbApiClient.fetchMovieDiscoverPage(page).block();
+                log.info("Fetching TMDB newest movies page: {}", page);
+                TmdbMovieResponseDTO response = tmdbApiClient.fetchNewestMovies(page).block();
                 if (response != null && response.getResults() != null) {
                     movieQueue.addAll(response.getResults());
                 }
                 Thread.sleep(API_THROTTLE_MS);
             } catch (Exception e) {
-                log.warn("Failed to fetch page {} during reader initialization", page, e);
+                log.warn("Failed to fetch newest movies page {} during reader initialization", page, e);
             }
         }
         log.info("Total {} movie items to process.", movieQueue.size());
@@ -88,7 +88,7 @@ public class TmdbBatchConfig {
     // 4. ItemWriter 정의
     @Bean
     @StepScope
-    public ItemWriter<TmdbMovieResponseDTO.MovieResultDTO> newContentItemWriter() {
+    public ItemWriter<TmdbMovieResponseDTO.MovieResultDTO> newMovieItemWriter() {
         return (Chunk<? extends TmdbMovieResponseDTO.MovieResultDTO> chunk) -> {
 
             // 1. 현재 청크에 포함된 모든 tmdbId 조회
@@ -139,7 +139,7 @@ public class TmdbBatchConfig {
                     .plot(listDto.getOverview())
                     .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
                     .runtime(detailDto.getRuntime())
-                    .type(1)
+                    .type(2)
                     .tmdbId(listDto.getId())
                     .build();
 
