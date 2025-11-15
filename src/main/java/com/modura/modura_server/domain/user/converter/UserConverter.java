@@ -77,6 +77,7 @@ public class UserConverter {
 
         return UserResponseDTO.GetContentReviewDTO.builder()
                 .id(review.getId())
+                .contentId(review.getContent().getId())
                 .title(review.getContent().getTitleKr())
                 .username(review.getUser().getNickname())
                 .rating(review.getRating())
@@ -90,6 +91,7 @@ public class UserConverter {
 
         return UserResponseDTO.GetPlaceReviewDTO.builder()
                 .id(review.getId())
+                .placeId(review.getPlace().getId())
                 .name(review.getPlace().getName())
                 .username(review.getUser().getNickname())
                 .rating(review.getRating())

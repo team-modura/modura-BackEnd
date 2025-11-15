@@ -49,6 +49,7 @@ public class UserResponseDTO {
     public static class GetContentReviewDTO {
 
         Long id;
+        Long contentId;
         String title;
         String username;
         Integer rating;
@@ -64,6 +65,7 @@ public class UserResponseDTO {
     public static class GetPlaceReviewDTO {
 
         Long id;
+        Long placeId;
         String name;
         String username;
         Integer rating;
