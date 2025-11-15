@@ -96,22 +96,20 @@ public class SearchCommandServiceImpl implements SearchCommandService {
 
     @Async
     @Override
-    @Transactional
     public void seedMovie() {
 
         RLock lock = redissonClient.getLock(SEED_MOVIE_LOCK_KEY);
         boolean acquired = false;
 
         try {
-            // 10초간 락 획득 시도, 락 획득 시 60초간 임대
-            acquired = lock.tryLock(10, 60, TimeUnit.SECONDS);
+            // 10초간 락 획득 시도, 락 획득 시 3분간 임대
+            acquired = lock.tryLock(10, 180, TimeUnit.SECONDS);
 
             // 락 획득 실패 시
             if (!acquired) {
                 log.warn("Movie seeding is already in progress.");
                 return;
             }
-
             log.info("Acquired movie seeding lock. Starting manual seeding...");
 
             List<TmdbMovieResponseDTO.MovieResultDTO> movieDtos = fetchPopularMovies();
@@ -120,19 +118,9 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 return;
             }
 
-            Set<Integer> incomingTmdbIds = movieDtos.stream()
-                    .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
-                    .collect(Collectors.toSet());
-            log.info("Fetched {} unique movie IDs from TMDB.", incomingTmdbIds.size());
-
-            Set<Integer> existingTmdbIds = contentRepository.findAllByTmdbIdIn(incomingTmdbIds)
-                    .stream()
-                    .map(Content::getTmdbId)
-                    .collect(Collectors.toSet());
-            log.info("Found {} existing movie IDs in DB.", existingTmdbIds.size());
-
-            Set<Integer> blacklistedTmdbIds = tmdbBlacklistRepository.findAllTmdbIds();
-            log.info("Found {} blacklisted movie IDs.", blacklistedTmdbIds.size());
+            Set<Integer> incomingTmdbIds = extractIds(movieDtos);
+            Set<Integer> existingTmdbIds = fetchExistingMovieIds(incomingTmdbIds);
+            Set<Integer> blacklistedTmdbIds = fetchBlacklistedIds();
 
             List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess = movieDtos.stream()
                     .filter(dto -> !existingTmdbIds.contains(dto.getId()))
@@ -144,22 +132,12 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 return;
             }
 
-            log.info("Fetching details for {} new movies...", moviesToProcess.size());
-
-            List<Content> newContentList = moviesToProcess.stream()
-                    .map(this::fetchDetailsAndBuildContent)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
-
-            if (!newContentList.isEmpty()) {
-                contentRepository.saveAll(newContentList);
-                log.info("Successfully saved {} new movies to the database.", newContentList.size());
-            } else {
-                log.info("No movies were saved after fetching details.");
-            }
+            List<Content> newContentList = buildContentList(moviesToProcess);
+            saveIfNotEmpty(newContentList);
         } catch (InterruptedException e) {
             // 락을 기다리는 도중 인터럽트 발생 시
             Thread.currentThread().interrupt();
+            log.warn("Movie seeding interrupted while waiting for lock.");
         } catch (Exception e) {
             // 시딩 로직 자체에서 예외 발생 시
             log.error("Error during manual movie seeding: {}", e.getMessage(), e);
@@ -168,6 +146,11 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 lock.unlock();
             }
         }
+    }
+
+    @Transactional
+    public void saveMoviesInTransaction(List<Content> movies) {
+        contentRepository.saveAll(movies);
     }
 
     private List<TmdbMovieResponseDTO.MovieResultDTO> fetchPopularMovies() {
@@ -256,5 +239,44 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         }
 
         return keywords;
+    }
+
+    private Set<Integer> extractIds(List<TmdbMovieResponseDTO.MovieResultDTO> movieDtos) {
+        Set<Integer> ids = movieDtos.stream()
+                .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
+                .collect(Collectors.toSet());
+        log.info("Fetched {} unique movie IDs from TMDB.", ids.size());
+        return ids;
+    }
+
+    private Set<Integer> fetchExistingMovieIds(Set<Integer> tmdbIds) {
+        Set<Integer> existingIds = contentRepository.findAllByTmdbIdIn(tmdbIds)
+                .stream().map(Content::getTmdbId)
+                .collect(Collectors.toSet());
+        log.info("Found {} existing movie IDs in DB.", existingIds.size());
+        return existingIds;
+    }
+
+    private Set<Integer> fetchBlacklistedIds() {
+        Set<Integer> blacklist = tmdbBlacklistRepository.findAllTmdbIds();
+        log.info("Found {} blacklisted movie IDs.", blacklist.size());
+        return blacklist;
+    }
+
+    private List<Content> buildContentList(List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess) {
+        log.info("Fetching details for {} new movies...", moviesToProcess.size());
+        return moviesToProcess.stream()
+                .map(this::fetchDetailsAndBuildContent)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private void saveIfNotEmpty(List<Content> contents) {
+        if (!contents.isEmpty()) {
+            saveMoviesInTransaction(contents);
+            log.info("Successfully saved {} new movies to the database.", contents.size());
+        } else {
+            log.info("No movies were saved after fetching details.");
+        }
     }
 }
