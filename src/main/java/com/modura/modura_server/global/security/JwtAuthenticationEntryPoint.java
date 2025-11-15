@@ -29,6 +29,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
         // 401 Unauthorized 에러를 JSON 형태로 응답
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
         ApiResponse<Object> apiResponse = ApiResponse.onFailure(ErrorStatus.UNAUTHORIZED);

@@ -29,6 +29,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 
         // 403 Forbidden 에러를 JSON 형태로 응답
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 
         ApiResponse<Object> apiResponse = ApiResponse.onFailure(ErrorStatus.FORBIDDEN);

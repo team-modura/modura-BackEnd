@@ -94,16 +94,20 @@ public class JwtProvider {
             return true;
         } catch (SignatureException e) {
             log.error("Invalid JWT signature");
+            throw new BusinessException(ErrorStatus.INVALID_TOKEN);
         } catch (MalformedJwtException e) {
             log.error("Invalid JWT token");
+            throw new BusinessException(ErrorStatus.INVALID_TOKEN);
         } catch (ExpiredJwtException e) {
             log.error("Expired JWT token");
+            throw new BusinessException(ErrorStatus.INVALID_TOKEN);
         } catch (UnsupportedJwtException e) {
             log.error("Unsupported JWT token");
+            throw new BusinessException(ErrorStatus.INVALID_TOKEN);
         } catch (IllegalArgumentException e) {
             log.error("JWT claims string is empty");
+            throw new BusinessException(ErrorStatus.INVALID_TOKEN);
         }
-        return false;
     }
 
     // HttpServletRequest에서 토큰 추출
