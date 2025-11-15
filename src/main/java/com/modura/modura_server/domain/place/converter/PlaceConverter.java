@@ -3,17 +3,19 @@ package com.modura.modura_server.domain.place.converter;
 import com.modura.modura_server.domain.place.dto.PlaceResponseDTO;
 import com.modura.modura_server.domain.place.entity.Place;
 import com.modura.modura_server.domain.place.entity.PlaceReview;
+import com.modura.modura_server.domain.user.entity.User;
 
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class PlaceConverter {
     public static PlaceResponseDTO.ReviewItemDTO toGetPlaceReviewDTO(PlaceReview placeReview, List<String> imageUrlList) {
 
+        User user = placeReview.getUser();
+        String username = (user.isInactive()) ? "탈퇴한 회원" : user.getNickname();
+
         return PlaceResponseDTO.ReviewItemDTO.builder()
                 .placeReviewId(placeReview.getId())
-                .username(placeReview.getUser().getNickname())
+                .username(username)
                 .rating(placeReview.getRating())
                 .comment(placeReview.getBody())
                 .imageUrl(imageUrlList)

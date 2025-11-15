@@ -14,6 +14,7 @@ import com.modura.modura_server.domain.place.repository.PlaceReviewRepository;
 import com.modura.modura_server.domain.place.repository.ReviewImageRepository;
 import com.modura.modura_server.domain.user.converter.UserConverter;
 import com.modura.modura_server.domain.user.entity.Stillcut;
+import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.domain.user.repository.StillcutRepository;
 import com.modura.modura_server.global.exception.BusinessException;
 import com.modura.modura_server.global.response.code.status.ErrorStatus;
@@ -164,9 +165,12 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
 
                     List<String> imageUrls = s3Service.generateViewPresignedUrls(s3Keys);
 
+                    User user = review.getUser();
+                    String username = (user.isInactive()) ? "탈퇴한 회원" : user.getNickname();
+
                     return PlaceResponseDTO.ReviewItemDTO.builder()
                             .placeReviewId(review.getId())
-                            .username(review.getUser().getNickname())
+                            .username(username)
                             .rating(review.getRating())
                             .comment(review.getBody())
                             .imageUrl(imageUrls)
