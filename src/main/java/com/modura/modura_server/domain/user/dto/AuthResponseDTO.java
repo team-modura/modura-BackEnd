@@ -18,6 +18,7 @@ public class AuthResponseDTO {
         String accessToken;
         String refreshToken;
         Boolean isNewUser;
+        String username;
     }
 
     @Builder

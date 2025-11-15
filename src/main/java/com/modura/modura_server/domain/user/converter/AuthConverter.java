@@ -12,6 +12,7 @@ public class AuthConverter {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .isNewUser(isNewUser)
+                .username(user.getNickname())
                 .build();
     }
 }
