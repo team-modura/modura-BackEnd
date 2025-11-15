@@ -53,11 +53,21 @@ public class SearchController {
     }
 
     @Operation(summary = "TOP 10 촬영지 조회")
-    @GetMapping("/places/top")
+    @GetMapping("/top/places")
     public ApiResponse<SearchResponseDTO.SearchPlaceListDTO> getTopPlace(@AuthenticationPrincipal CustomUserDetails userDetails) {
 
         Long userId = userDetails.getUser().getId();
         SearchResponseDTO.SearchPlaceListDTO response = searchQueryService.getTopPlace(userId);
+
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(summary = "TOP 10 영화 조회")
+    @GetMapping("/top/movie")
+    public ApiResponse<SearchResponseDTO.GetTopContentListDTO> getTopMovie(@AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        SearchResponseDTO.GetTopContentListDTO response = searchQueryService.getTopMovie(userId);
 
         return ApiResponse.onSuccess(response);
     }

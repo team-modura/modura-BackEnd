@@ -1,5 +1,6 @@
 package com.modura.modura_server.domain.search.converter;
 
+import com.modura.modura_server.domain.content.dto.PopularContentCacheDTO;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.place.entity.Place;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
@@ -55,6 +56,30 @@ public class SearchConverter {
 
         return SearchResponseDTO.SearchPlaceListDTO.builder()
                 .placeList(placeDTOList)
+                .build();
+    }
+
+    public static SearchResponseDTO.GetTopContentListDTO toGetTopContentListDTOFromCache(List<PopularContentCacheDTO> contentList, Set<Long> likedContentIds){
+
+        List<SearchResponseDTO.GetTopContentDTO> contentDTOList = contentList.stream()
+                .map(cacheDto -> {
+                    boolean isLiked = likedContentIds.contains(cacheDto.getId());
+                    return toGetTopContentDTOFromCache(cacheDto, isLiked);
+                })
+                .collect(Collectors.toList());
+
+        return SearchResponseDTO.GetTopContentListDTO.builder()
+                .contentList(contentDTOList)
+                .build();
+    }
+
+    public static SearchResponseDTO.GetTopContentDTO toGetTopContentDTOFromCache(PopularContentCacheDTO cacheDTO, boolean isLiked) {
+
+        return SearchResponseDTO.GetTopContentDTO.builder()
+                .id(cacheDTO.getId())
+                .title(cacheDTO.getTitleKr())
+                .isLiked(isLiked)
+                .thumbnail(cacheDTO.getThumbnail())
                 .build();
     }
 }

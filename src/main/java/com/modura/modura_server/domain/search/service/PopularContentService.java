@@ -1,4 +1,4 @@
-package com.modura.modura_server.domain.content.service;
+package com.modura.modura_server.domain.search.service;
 
 import com.modura.modura_server.domain.content.dto.PopularContentCacheDTO;
 import com.modura.modura_server.domain.content.entity.Content;

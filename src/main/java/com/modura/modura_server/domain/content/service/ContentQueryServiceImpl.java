@@ -2,7 +2,6 @@ package com.modura.modura_server.domain.content.service;
 
 import com.modura.modura_server.domain.content.converter.ContentConverter;
 import com.modura.modura_server.domain.content.dto.ContentResponseDTO;
-import com.modura.modura_server.domain.content.dto.PopularContentCacheDTO;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.entity.ContentReview;
 import com.modura.modura_server.domain.content.entity.Platform;
@@ -32,7 +31,6 @@ public class ContentQueryServiceImpl implements ContentQueryService {
     private final PlatformRepository platformRepository;
     private final PlaceLikesRepository placeLikesRepository;
     private final StillcutRepository stillcutRepository;
-    private final PopularContentService popularContentService;
 
     @Override
     @Transactional(readOnly = true)
@@ -134,28 +132,6 @@ public class ContentQueryServiceImpl implements ContentQueryService {
         return ContentConverter.toContentReviewListDTO(
                 reviews
         );
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ContentResponseDTO.GetTopContentListDTO getTopContent(Long userId) {
-
-        List<PopularContentCacheDTO> cachedContents = popularContentService.getPopularContent();
-
-        if (cachedContents.isEmpty()) {
-            return ContentResponseDTO.GetTopContentListDTO.builder()
-                    .contentList(Collections.emptyList())
-                    .build();
-        }
-
-        List<Long> contentIds = cachedContents.stream()
-                .map(PopularContentCacheDTO::getId)
-                .collect(Collectors.toList());
-
-        // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
-        Set<Long> likedContentIds = contentLikesRepository.findIdsByUserIdAndContentIds(userId, contentIds);
-
-        return ContentConverter.toGetTopContentListDTOFromCache(cachedContents, likedContentIds);
     }
 
     @Override
