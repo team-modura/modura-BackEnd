@@ -1,6 +1,7 @@
 package com.modura.modura_server.domain.search.controller;
 
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
+import com.modura.modura_server.domain.search.service.SearchCommandService;
 import com.modura.modura_server.domain.search.service.SearchQueryService;
 import com.modura.modura_server.global.response.ApiResponse;
 import com.modura.modura_server.global.security.CustomUserDetails;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class SearchController {
 
     private final SearchQueryService searchQueryService;
+    private final SearchCommandService searchCommandService;
 
     @Operation(summary = "컨텐츠 검색")
     @GetMapping("/contents")
@@ -70,5 +72,15 @@ public class SearchController {
         SearchResponseDTO.GetTopContentListDTO response = searchQueryService.getTopMovie(userId);
 
         return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(summary = "TMDB Movie Seeding",
+            description = "인기순으로 영화 500개 저장")
+    @PostMapping("/seeding/movie")
+    public ApiResponse<Void> seedMovie() {
+
+        searchCommandService.seedMovie();
+
+        return ApiResponse.onSuccess(null);
     }
 }

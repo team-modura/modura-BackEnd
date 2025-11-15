@@ -1,5 +1,11 @@
 package com.modura.modura_server.domain.search.service;
 
+import com.modura.modura_server.domain.content.entity.Content;
+import com.modura.modura_server.domain.content.repository.ContentRepository;
+import com.modura.modura_server.global.tmdb.client.TmdbApiClient;
+import com.modura.modura_server.global.tmdb.dto.TmdbMovieDetailResponseDTO;
+import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
+import com.modura.modura_server.global.tmdb.repository.TmdbBlacklistRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openkoreantext.processor.OpenKoreanTextProcessorJava;
@@ -7,12 +13,17 @@ import org.openkoreantext.processor.tokenizer.KoreanTokenizer;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import scala.collection.Seq;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Slf4j
 @Service
@@ -20,12 +31,20 @@ import java.util.regex.Pattern;
 public class SearchCommandServiceImpl implements SearchCommandService {
 
     private final RedisTemplate<String, String> redisTemplate;
+
+    private final TmdbApiClient tmdbApiClient;
+    private final ContentRepository contentRepository;
+    private final TmdbBlacklistRepository tmdbBlacklistRepository;
+
     private static final String POPULAR_KEYWORD_KEY = "popular:keywords";
     private static final int MIN_KEYWORD_LENGTH = 2;
 
     // 의미없는 문자 패턴 (자음/모음 단독, 특수문자 반복 등)
     private static final Pattern NOISE_PATTERN = Pattern.compile("[ㄱ-ㅎㅏ-ㅣ]+$|[^가-힣a-zA-Z0-9\\s]+$");
 
+    private static final int PAGES_TO_FETCH = 25; // 25 페이지 * 20개 = 500개
+    private static final long API_THROTTLE_MS = 100;
+    private static final String TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
     @Async
     @Override
@@ -66,6 +85,116 @@ public class SearchCommandServiceImpl implements SearchCommandService {
             }
         } catch (Exception e) {
             log.error("Failed to increment popular keyword score in Redis for query: {}", trimmedQuery, e);
+        }
+    }
+
+    @Async
+    @Override
+    @Transactional
+    public void seedMovie() {
+
+        List<TmdbMovieResponseDTO.MovieResultDTO> movieDtos = fetchPopularMovies();
+        if (movieDtos.isEmpty()) {
+            log.warn("No movies fetched from TMDB discover API. Seeding job stopping.");
+            return;
+        }
+
+        Set<Integer> incomingTmdbIds = movieDtos.stream()
+                .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
+                .collect(Collectors.toSet());
+        log.info("Fetched {} unique movie IDs from TMDB.", incomingTmdbIds.size());
+
+        // DB에 존재하는 TMDB ID 조회
+        Set<Integer> existingTmdbIds = contentRepository.findAllByTmdbIdIn(incomingTmdbIds)
+                .stream()
+                .map(Content::getTmdbId)
+                .collect(Collectors.toSet());
+        log.info("Found {} existing movie IDs in DB.", existingTmdbIds.size());
+
+        // 블랙리스트 TMDB ID 조회
+        Set<Integer> blacklistedTmdbIds = tmdbBlacklistRepository.findAllTmdbIds();
+        log.info("Found {} blacklisted movie IDs.", blacklistedTmdbIds.size());
+
+        // 필터링
+        List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess = movieDtos.stream()
+                .filter(dto -> !existingTmdbIds.contains(dto.getId()))
+                .filter(dto -> !blacklistedTmdbIds.contains(dto.getId()))
+                .collect(Collectors.toList());
+
+        if (moviesToProcess.isEmpty()) {
+            log.info("Seeding job complete.");
+            return;
+        }
+
+        log.info("Fetching details for {} new movies...", moviesToProcess.size());
+
+        List<Content> newContentList = moviesToProcess.stream()
+                .map(this::fetchDetailsAndBuildContent)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        // DB에 일괄 저장
+        if (!newContentList.isEmpty()) {
+            contentRepository.saveAll(newContentList);
+            log.info("Successfully saved {} new movies to the database.", newContentList.size());
+        } else {
+            log.info("No movies were saved after fetching details.");
+        }
+    }
+
+    private List<TmdbMovieResponseDTO.MovieResultDTO> fetchPopularMovies() {
+
+        return IntStream.rangeClosed(1, PAGES_TO_FETCH)
+                .parallel() // 페이지 조회를 병렬로 처리
+                .mapToObj(page -> {
+                    try {
+                        log.debug("Fetching TMDB discover page: {}", page);
+                        TmdbMovieResponseDTO response = tmdbApiClient.fetchPopularMovies(page).block();
+                        Thread.sleep(API_THROTTLE_MS);
+                        return (response != null && response.getResults() != null) ? response.getResults() : List.<TmdbMovieResponseDTO.MovieResultDTO>of();
+                    } catch (Exception e) {
+                        log.warn("Failed to fetch page {} from TMDB. Skipping.", page, e);
+                        return List.<TmdbMovieResponseDTO.MovieResultDTO>of(); // 실패 시 빈 리스트 반환
+                    }
+                })
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
+    }
+
+    private Content fetchDetailsAndBuildContent(TmdbMovieResponseDTO.MovieResultDTO listDto) {
+        try {
+            TmdbMovieDetailResponseDTO detailDto = tmdbApiClient.fetchMovieDetails(listDto.getId()).block();
+
+            if (detailDto == null) {
+                log.warn("Skipping movie. Failed to fetch details for new tmdbId: {}", listDto.getId());
+                return null;
+            }
+
+            return Content.builder()
+                    .titleKr(listDto.getTitle())
+                    .titleEng(detailDto.getTitle())
+                    .year(parseYearFromDate(listDto.getReleaseDate()))
+                    .plot(listDto.getOverview())
+                    .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
+                    .runtime(detailDto.getRuntime())
+                    .type(2)
+                    .tmdbId(listDto.getId())
+                    .build();
+        } catch (Exception e) {
+            log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
+            return null;
+        }
+    }
+
+    private Integer parseYearFromDate(String releaseDate) {
+        if (releaseDate == null || releaseDate.isBlank() || releaseDate.length() < 4) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(releaseDate.substring(0, 4));
+        } catch (NumberFormatException e) {
+            log.warn("Failed to parse year from release date: {}", releaseDate);
+            return null;
         }
     }
 
