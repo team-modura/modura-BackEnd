@@ -110,6 +110,23 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         return generateAndSaveTokens(user, isNewUser);
     }
 
+    @Override
+    @Transactional
+    public void withdrawal(Long userId, String accessToken) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        // 이미 탈퇴 처리된 경우, 로그아웃만 실행
+        if (user.isInactive()) {
+            logout(accessToken);
+            return;
+        }
+
+        user.deactivate();
+        logout(accessToken);
+    }
+
     private AuthResponseDTO.GetUserDTO generateAndSaveTokens(User user, boolean isNewUser) {
 
         String accessToken = jwtProvider.generateAccessToken(user);
