@@ -70,14 +70,14 @@ public class TmdbBatchConfig {
 
         for (int page = 1; page <= TOTAL_PAGES_TO_FETCH; page++) {
             try {
-                log.info("Fetching TMDB page: {}", page);
-                TmdbMovieResponseDTO response = tmdbApiClient.fetchMovieDiscoverPage(page).block();
+                log.info("Fetching TMDB newest movies page: {}", page);
+                TmdbMovieResponseDTO response = tmdbApiClient.fetchNewestMovies(page).block();
                 if (response != null && response.getResults() != null) {
                     movieQueue.addAll(response.getResults());
                 }
                 Thread.sleep(API_THROTTLE_MS);
             } catch (Exception e) {
-                log.warn("Failed to fetch page {} during reader initialization", page, e);
+                log.warn("Failed to fetch newest movies page {} during reader initialization", page, e);
             }
         }
         log.info("Total {} movie items to process.", movieQueue.size());

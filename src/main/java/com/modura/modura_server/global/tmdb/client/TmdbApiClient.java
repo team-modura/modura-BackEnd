@@ -23,9 +23,33 @@ public class TmdbApiClient {
     private String TMDB_BEARER_TOKEN;
 
     /**
-     * [API 호출 1] 영화 목록(Discover) 페이지 조회
+     * [API 호출 1] 최신 영화 목록(Discover) 페이지 조회 (DB Seeding용)
      */
-    public Mono<TmdbMovieResponseDTO> fetchMovieDiscoverPage(int page) {
+    public Mono<TmdbMovieResponseDTO> fetchNewestMovies(int page) {
+
+        return webClient.get()
+                .uri(TMDB_BASE_URL, uriBuilder -> uriBuilder
+                        .path("/discover/movie")
+                        .queryParam("include_adult", "false")
+                        .queryParam("include_video", "false")
+                        .queryParam("language", "ko-KR")
+                        .queryParam("sort_by", "primary_release_date.desc")
+                        .queryParam("with_original_language", "ko")
+                        .queryParam("page", page)
+                        .build())
+                .header("Authorization", "Bearer " + TMDB_BEARER_TOKEN)
+                .retrieve()
+                .bodyToMono(TmdbMovieResponseDTO.class)
+                .onErrorResume(e -> {
+                    log.warn("Failed to fetch newest movies page {}: {}", page, e.getMessage());
+                    return Mono.empty(); // discover 실패 시 해당 페이지 스킵
+                });
+    }
+
+    /**
+     * [API 호출 2] 인기 영화 목록(Discover) 페이지 조회 (인기 컨텐츠 캐싱용)
+     */
+    public Mono<TmdbMovieResponseDTO> fetchPopularMovies(int page) {
 
         return webClient.get()
                 .uri(TMDB_BASE_URL, uriBuilder -> uriBuilder
@@ -41,13 +65,13 @@ public class TmdbApiClient {
                 .retrieve()
                 .bodyToMono(TmdbMovieResponseDTO.class)
                 .onErrorResume(e -> {
-                    log.warn("Failed to fetch discover page {}: {}", page, e.getMessage());
+                    log.warn("Failed to fetch popular movies page {}: {}", page, e.getMessage());
                     return Mono.empty(); // discover 실패 시 해당 페이지 스킵
                 });
     }
 
     /**
-     * [API 호출 2] 영화 상세 정보 조회
+     * [API 호출 3] 영화 상세 정보 조회 (DB Seeding용)
      */
     public Mono<TmdbMovieDetailResponseDTO> fetchMovieDetails(int tmdbId) {
 

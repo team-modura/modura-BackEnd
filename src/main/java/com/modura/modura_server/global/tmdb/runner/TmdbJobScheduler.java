@@ -1,6 +1,6 @@
 package com.modura.modura_server.global.tmdb.runner;
 
-import com.modura.modura_server.domain.content.service.PopularContentService;
+import com.modura.modura_server.domain.search.service.PopularContentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.*;
