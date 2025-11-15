@@ -12,6 +12,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ContentConverter {
+
+    private static final String INACTIVE_USER_DISPLAY_NAME = "탈퇴한 회원";
+
+    private static String resolveUsername(User user) {
+        return (user == null || user.isInactive()) ? INACTIVE_USER_DISPLAY_NAME : user.getNickname();
+    }
+
     public static ContentResponseDTO.ContentDetailDTO toContentDetailDTO(
             Content content,
             Boolean isLiked,
@@ -31,8 +38,7 @@ public class ContentConverter {
                 .filter(review -> review.getUser() != null)
                 .limit(2)
                 .map(review -> {
-                    User user = review.getUser();
-                    String username = (user.isInactive()) ? "탈퇴한 회원" : user.getNickname();
+                    String username = resolveUsername(review.getUser());
 
                     return ContentResponseDTO.ReviewItemDTO.builder()
                             .id(review.getId())
@@ -76,8 +82,7 @@ public class ContentConverter {
                 .sorted(Comparator.comparing(ContentReview::getCreatedAt).reversed())
                 .filter(review -> review.getUser() != null)
                 .map(review -> {
-                    User user = review.getUser();
-                    String username = (user.isInactive()) ? "탈퇴한 회원" : user.getNickname();
+                    String username = resolveUsername(review.getUser());
 
                     return ContentResponseDTO.ReviewItemDTO.builder()
                             .id(review.getId())
@@ -99,9 +104,7 @@ public class ContentConverter {
         if (review == null || review.getUser() == null) {
             return null;
         }
-
-        User user = review.getUser();
-        String username = (user.isInactive()) ? "탈퇴한 회원" : user.getNickname();
+        String username = resolveUsername(review.getUser());
 
         return ContentResponseDTO.ReviewItemDTO.builder()
                 .id(review.getId())

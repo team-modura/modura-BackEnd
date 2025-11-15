@@ -8,10 +8,16 @@ import com.modura.modura_server.domain.user.entity.User;
 import java.util.List;
 
 public class PlaceConverter {
+
+    private static final String INACTIVE_USER_DISPLAY_NAME = "탈퇴한 회원";
+
+    private static String resolveUsername(User user) {
+        return (user == null || user.isInactive()) ? INACTIVE_USER_DISPLAY_NAME : user.getNickname();
+    }
+
     public static PlaceResponseDTO.ReviewItemDTO toGetPlaceReviewDTO(PlaceReview placeReview, List<String> imageUrlList) {
 
-        User user = placeReview.getUser();
-        String username = (user.isInactive()) ? "탈퇴한 회원" : user.getNickname();
+        String username = resolveUsername(placeReview.getUser());
 
         return PlaceResponseDTO.ReviewItemDTO.builder()
                 .placeReviewId(placeReview.getId())
