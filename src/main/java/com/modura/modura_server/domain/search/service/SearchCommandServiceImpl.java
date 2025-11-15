@@ -172,26 +172,26 @@ public class SearchCommandServiceImpl implements SearchCommandService {
 
     private List<TmdbMovieResponseDTO.MovieResultDTO> fetchPopularMovies() {
 
-        return IntStream.rangeClosed(1, PAGES_TO_FETCH)
-                .parallel() // 페이지 조회를 병렬로 처리
-                .mapToObj(page -> {
-                    try {
-                        log.debug("Fetching TMDB discover page: {}", page);
-                        TmdbMovieResponseDTO response = tmdbApiClient.fetchPopularMovies(page).block();
-                        Thread.sleep(API_THROTTLE_MS);
-                        return (response != null && response.getResults() != null) ? response.getResults() : List.<TmdbMovieResponseDTO.MovieResultDTO>of();
-                    } catch (Exception e) {
-                        log.warn("Failed to fetch page {} from TMDB. Skipping.", page, e);
-                        return List.<TmdbMovieResponseDTO.MovieResultDTO>of(); // 실패 시 빈 리스트 반환
-                    }
-                })
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+        List<TmdbMovieResponseDTO.MovieResultDTO> allMovies = new ArrayList<>();
+        for (int page = 1; page <= PAGES_TO_FETCH; page++) {
+            try {
+                log.debug("Fetching TMDB discover page: {}", page);
+                TmdbMovieResponseDTO response = tmdbApiClient.fetchPopularMovies(page).block();
+                if (response != null && response.getResults() != null) {
+                    allMovies.addAll(response.getResults());
+                }
+                Thread.sleep(API_THROTTLE_MS);
+            } catch (Exception e) {
+                log.warn("Failed to fetch page {} from TMDB. Skipping.", page, e);
+            }
+        }
+        return allMovies;
     }
 
     private Content fetchDetailsAndBuildContent(TmdbMovieResponseDTO.MovieResultDTO listDto) {
         try {
             TmdbMovieDetailResponseDTO detailDto = tmdbApiClient.fetchMovieDetails(listDto.getId()).block();
+            Thread.sleep(API_THROTTLE_MS);
 
             if (detailDto == null) {
                 log.warn("Skipping movie. Failed to fetch details for new tmdbId: {}", listDto.getId());
