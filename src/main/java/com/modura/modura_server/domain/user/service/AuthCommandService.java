@@ -10,4 +10,6 @@ public interface AuthCommandService {
     AuthResponseDTO.GetUserDTO testLogin(Long userId);
     void logout(String accessToken);
     AuthResponseDTO.GetUserDTO reissueToken(String accessToken, String refreshToken);
+    void withdrawal(Long userId, String accessToken);
+    void reactivate(Long userId);
 }

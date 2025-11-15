@@ -7,12 +7,14 @@ import com.modura.modura_server.global.exception.BusinessException;
 import com.modura.modura_server.global.jwt.JwtProvider;
 import com.modura.modura_server.global.response.ApiResponse;
 import com.modura.modura_server.global.response.code.status.ErrorStatus;
+import com.modura.modura_server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -79,5 +81,28 @@ public class AuthController {
         AuthResponseDTO.GetUserDTO response = authCommandService.reissueToken(accessToken, refreshToken);
 
         return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(summary = "회원탈퇴")
+    @PatchMapping("/withdrawal")
+    public ApiResponse<Void> withdrawal(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                        HttpServletRequest request) {
+
+        Long userId = userDetails.getUser().getId();
+        String accessToken = jwtProvider.resolveToken(request);
+
+        authCommandService.withdrawal(userId, accessToken);
+
+        return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "회원 탈퇴 철회 (계정 복구)")
+    @PatchMapping("/reactivate")
+    public ApiResponse<Void> reactivate(@AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        authCommandService.reactivate(userId);
+
+        return ApiResponse.onSuccess(null);
     }
 }

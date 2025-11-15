@@ -1,5 +1,6 @@
 package com.modura.modura_server.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.modura.modura_server.global.jwt.JwtAuthenticationFilter;
 import com.modura.modura_server.global.jwt.JwtProvider;
 import com.modura.modura_server.global.security.JwtAccessDeniedHandler;
@@ -26,6 +27,7 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
     private final RedisTemplate<String, String> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -47,11 +49,16 @@ public class SecurityConfig {
                                 .accessDeniedHandler(jwtAccessDeniedHandler)) // 403
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/auth/signup", "/auth/login", "/auth/token").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+
+                        .requestMatchers("/auth/withdrawal", "/users/**", "/contents/**", "/places/**", "/search/**", "/s3/**").hasRole("USER")
+                        .requestMatchers("/auth/reactivate").hasRole("INACTIVE")
+                        .requestMatchers("/auth/reissue", "/auth/logout").hasAnyRole("USER", "INACTIVE")
+
                         .anyRequest().authenticated())
 
-                .addFilterBefore(new JwtAuthenticationFilter(jwtProvider, redisTemplate),
+                .addFilterBefore(new JwtAuthenticationFilter(jwtProvider, redisTemplate, objectMapper),
                         UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

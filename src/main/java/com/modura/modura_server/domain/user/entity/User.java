@@ -38,4 +38,16 @@ public class User extends BaseEntity {
     public void updateAddress(String address) {
         this.address = address;
     }
+
+    public void deactivate() {
+        if (this.inactiveDate == null) {
+            this.inactiveDate = LocalDate.now();
+        }
+    }
+
+    public void reactivate() {
+        this.inactiveDate = null;
+    }
+
+    public boolean isInactive() { return this.inactiveDate != null; }
 }

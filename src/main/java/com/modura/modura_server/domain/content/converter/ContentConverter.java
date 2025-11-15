@@ -4,6 +4,7 @@ import com.modura.modura_server.domain.content.dto.ContentResponseDTO;
 import com.modura.modura_server.domain.content.dto.PopularContentCacheDTO;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.entity.ContentReview;
+import com.modura.modura_server.domain.user.entity.User;
 
 import java.util.Comparator;
 import java.util.List;
@@ -11,6 +12,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ContentConverter {
+
+    private static final String INACTIVE_USER_DISPLAY_NAME = "탈퇴한 회원";
+
+    private static String resolveUsername(User user) {
+        return (user == null || user.isInactive()) ? INACTIVE_USER_DISPLAY_NAME : user.getNickname();
+    }
+
     public static ContentResponseDTO.ContentDetailDTO toContentDetailDTO(
             Content content,
             Boolean isLiked,
@@ -29,13 +37,17 @@ public class ContentConverter {
                 .sorted(Comparator.comparing(ContentReview::getCreatedAt).reversed())
                 .filter(review -> review.getUser() != null)
                 .limit(2)
-                .map(review -> ContentResponseDTO.ReviewItemDTO.builder()
-                        .id(review.getId())
-                        .username(review.getUser().getNickname())
-                        .rating(review.getRating())
-                        .comment(review.getBody())
-                        .createdAt(review.getCreatedAt().toString())
-                        .build())
+                .map(review -> {
+                    String username = resolveUsername(review.getUser());
+
+                    return ContentResponseDTO.ReviewItemDTO.builder()
+                            .id(review.getId())
+                            .username(username)
+                            .rating(review.getRating())
+                            .comment(review.getBody())
+                            .createdAt(review.getCreatedAt().toString())
+                            .build();
+                })
                 .collect(Collectors.toList());
 
 
@@ -69,13 +81,17 @@ public class ContentConverter {
         List<ContentResponseDTO.ReviewItemDTO> reviewItemDTOS = reviews.stream()
                 .sorted(Comparator.comparing(ContentReview::getCreatedAt).reversed())
                 .filter(review -> review.getUser() != null)
-                .map(review -> ContentResponseDTO.ReviewItemDTO.builder()
-                        .id(review.getId())
-                        .username(review.getUser().getNickname())
-                        .rating(review.getRating())
-                        .comment(review.getBody())
-                        .createdAt(review.getCreatedAt().toString())
-                        .build())
+                .map(review -> {
+                    String username = resolveUsername(review.getUser());
+
+                    return ContentResponseDTO.ReviewItemDTO.builder()
+                            .id(review.getId())
+                            .username(username)
+                            .rating(review.getRating())
+                            .comment(review.getBody())
+                            .createdAt(review.getCreatedAt().toString())
+                            .build();
+                })
                 .collect(Collectors.toList());
 
 
@@ -88,13 +104,11 @@ public class ContentConverter {
         if (review == null || review.getUser() == null) {
             return null;
         }
+        String username = resolveUsername(review.getUser());
 
         return ContentResponseDTO.ReviewItemDTO.builder()
                 .id(review.getId())
-                .username(
-                        review.getUser() != null && review.getUser().getNickname() != null ?
-                                review.getUser().getNickname() : "알 수 없음"
-                )
+                .username(username)
                 .rating(review.getRating() != null ? review.getRating() : 0)
                 .comment(review.getBody() != null ? review.getBody() : "")
                 .createdAt(review.getCreatedAt() != null ? review.getCreatedAt().toString() : "")

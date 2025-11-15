@@ -14,6 +14,7 @@ import com.modura.modura_server.domain.place.repository.PlaceReviewRepository;
 import com.modura.modura_server.domain.place.repository.ReviewImageRepository;
 import com.modura.modura_server.domain.user.converter.UserConverter;
 import com.modura.modura_server.domain.user.entity.Stillcut;
+import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.domain.user.repository.StillcutRepository;
 import com.modura.modura_server.global.exception.BusinessException;
 import com.modura.modura_server.global.response.code.status.ErrorStatus;
@@ -38,6 +39,12 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     private final ContentLikesRepository contentLikesRepository;
     private final ContentRepository contentRepository;
     private final S3Service s3Service;
+
+    private static final String INACTIVE_USER_DISPLAY_NAME = "탈퇴한 회원";
+
+    private static String resolveUsername(User user) {
+        return (user == null || user.isInactive()) ? INACTIVE_USER_DISPLAY_NAME : user.getNickname();
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -164,9 +171,11 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
 
                     List<String> imageUrls = s3Service.generateViewPresignedUrls(s3Keys);
 
+                    String username = resolveUsername(review.getUser());
+
                     return PlaceResponseDTO.ReviewItemDTO.builder()
                             .placeReviewId(review.getId())
-                            .username(review.getUser().getNickname())
+                            .username(username)
                             .rating(review.getRating())
                             .comment(review.getBody())
                             .imageUrl(imageUrls)
@@ -256,7 +265,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
 
         // Stillcut에서 Place 추출 (중복 제거)
         return stillcuts.stream()
-                .map(Stillcut::getPlace) // LAZY 로딩이 아닌, 이미 Fetch된 Place 객체입니다.
+                .map(Stillcut::getPlace)
                 .distinct()
                 .toList();
     }
