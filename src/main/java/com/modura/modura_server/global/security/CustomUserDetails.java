@@ -14,14 +14,27 @@ import java.util.List;
 public class CustomUserDetails implements UserDetails {
 
     private final User user;
+    private final Collection<? extends GrantedAuthority> authorities;
 
+    /**
+     * 기본 생성자 (정상 유저용)
+     */
     public CustomUserDetails(User user) {
         this.user = user;
+        this.authorities = List.of(new SimpleGrantedAuthority(user.getRole().name()));
+    }
+
+    /**
+     * 권한 주입 생성자 (비활성 유저용)
+     */
+    public CustomUserDetails(User user, Collection<? extends GrantedAuthority> authorities) {
+        this.user = user;
+        this.authorities = authorities;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(user.getRole().name()));
+        return this.authorities;
     }
 
     @Override

@@ -45,5 +45,9 @@ public class User extends BaseEntity {
         }
     }
 
+    public void reactivate() {
+        this.inactiveDate = null;
+    }
+
     public boolean isInactive() { return this.inactiveDate != null; }
 }

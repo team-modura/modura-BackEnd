@@ -13,6 +13,7 @@ public class AuthConverter {
                 .refreshToken(refreshToken)
                 .isNewUser(isNewUser)
                 .username(user.getNickname())
+                .isInactive(user.isInactive())
                 .build();
     }
 }

@@ -11,4 +11,5 @@ public interface AuthCommandService {
     void logout(String accessToken);
     AuthResponseDTO.GetUserDTO reissueToken(String accessToken, String refreshToken);
     void withdrawal(Long userId, String accessToken);
+    void reactivate(Long userId);
 }

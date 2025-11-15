@@ -49,8 +49,13 @@ public class SecurityConfig {
                                 .accessDeniedHandler(jwtAccessDeniedHandler)) // 403
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/auth/signup", "/auth/login", "/auth/token").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+
+                        .requestMatchers("/users/**", "/contents/**", "/places/**", "/search/**", "/s3/**").hasRole("USER")
+                        .requestMatchers("/auth/reactivate").hasRole("INACTIVE")
+                        .requestMatchers("/auth/reissue", "/auth/logout").hasAnyRole("USER", "INACTIVE")
+
                         .anyRequest().authenticated())
 
                 .addFilterBefore(new JwtAuthenticationFilter(jwtProvider, redisTemplate, objectMapper),

@@ -95,4 +95,14 @@ public class AuthController {
 
         return ApiResponse.onSuccess(null);
     }
+
+    @Operation(summary = "회원 탈퇴 철회 (계정 복구)")
+    @PatchMapping("/reactivate")
+    public ApiResponse<Void> reactivate(@AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        authCommandService.reactivate(userId);
+
+        return ApiResponse.onSuccess(null);
+    }
 }

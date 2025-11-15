@@ -127,6 +127,20 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         logout(accessToken);
     }
 
+    @Override
+    @Transactional
+    public void reactivate(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        if (!user.isInactive()) {
+            return;
+        }
+
+        user.reactivate();
+    }
+
     private AuthResponseDTO.GetUserDTO generateAndSaveTokens(User user, boolean isNewUser) {
 
         String accessToken = jwtProvider.generateAccessToken(user);
