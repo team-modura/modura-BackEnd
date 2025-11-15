@@ -57,7 +57,7 @@ public class TmdbBatchConfig {
         return new StepBuilder("tmdbSeedingStep", jobRepository)
                 .<TmdbMovieResponseDTO.MovieResultDTO, TmdbMovieResponseDTO.MovieResultDTO>chunk(CHUNK_SIZE, transactionManager)
                 .reader(tmdbMovieItemReader())
-                .writer(newContentItemWriter())
+                .writer(newMovieItemWriter())
                 .build();
     }
 

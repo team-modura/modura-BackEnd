@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openkoreantext.processor.OpenKoreanTextProcessorJava;
 import org.openkoreantext.processor.tokenizer.KoreanTokenizer;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -35,9 +38,12 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     private final TmdbApiClient tmdbApiClient;
     private final ContentRepository contentRepository;
     private final TmdbBlacklistRepository tmdbBlacklistRepository;
+    private final RedissonClient redissonClient;
 
     private static final String POPULAR_KEYWORD_KEY = "popular:keywords";
     private static final int MIN_KEYWORD_LENGTH = 2;
+
+    private static final String SEED_MOVIE_LOCK_KEY = "lock:seedMovie";
 
     // 의미없는 문자 패턴 (자음/모음 단독, 특수문자 반복 등)
     private static final Pattern NOISE_PATTERN = Pattern.compile("[ㄱ-ㅎㅏ-ㅣ]+$|[^가-힣a-zA-Z0-9\\s]+$");
@@ -93,52 +99,74 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     @Transactional
     public void seedMovie() {
 
-        List<TmdbMovieResponseDTO.MovieResultDTO> movieDtos = fetchPopularMovies();
-        if (movieDtos.isEmpty()) {
-            log.warn("No movies fetched from TMDB discover API. Seeding job stopping.");
-            return;
-        }
+        RLock lock = redissonClient.getLock(SEED_MOVIE_LOCK_KEY);
+        boolean acquired = false;
 
-        Set<Integer> incomingTmdbIds = movieDtos.stream()
-                .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
-                .collect(Collectors.toSet());
-        log.info("Fetched {} unique movie IDs from TMDB.", incomingTmdbIds.size());
+        try {
+            // 10초간 락 획득 시도, 락 획득 시 60초간 임대
+            acquired = lock.tryLock(10, 60, TimeUnit.SECONDS);
 
-        // DB에 존재하는 TMDB ID 조회
-        Set<Integer> existingTmdbIds = contentRepository.findAllByTmdbIdIn(incomingTmdbIds)
-                .stream()
-                .map(Content::getTmdbId)
-                .collect(Collectors.toSet());
-        log.info("Found {} existing movie IDs in DB.", existingTmdbIds.size());
+            // 락 획득 실패 시
+            if (!acquired) {
+                log.warn("Movie seeding is already in progress.");
+                return;
+            }
 
-        // 블랙리스트 TMDB ID 조회
-        Set<Integer> blacklistedTmdbIds = tmdbBlacklistRepository.findAllTmdbIds();
-        log.info("Found {} blacklisted movie IDs.", blacklistedTmdbIds.size());
+            log.info("Acquired movie seeding lock. Starting manual seeding...");
 
-        // 필터링
-        List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess = movieDtos.stream()
-                .filter(dto -> !existingTmdbIds.contains(dto.getId()))
-                .filter(dto -> !blacklistedTmdbIds.contains(dto.getId()))
-                .collect(Collectors.toList());
+            List<TmdbMovieResponseDTO.MovieResultDTO> movieDtos = fetchPopularMovies();
+            if (movieDtos.isEmpty()) {
+                log.warn("No movies fetched from TMDB discover API. Seeding job stopping.");
+                return;
+            }
 
-        if (moviesToProcess.isEmpty()) {
-            log.info("Seeding job complete.");
-            return;
-        }
+            Set<Integer> incomingTmdbIds = movieDtos.stream()
+                    .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
+                    .collect(Collectors.toSet());
+            log.info("Fetched {} unique movie IDs from TMDB.", incomingTmdbIds.size());
 
-        log.info("Fetching details for {} new movies...", moviesToProcess.size());
+            Set<Integer> existingTmdbIds = contentRepository.findAllByTmdbIdIn(incomingTmdbIds)
+                    .stream()
+                    .map(Content::getTmdbId)
+                    .collect(Collectors.toSet());
+            log.info("Found {} existing movie IDs in DB.", existingTmdbIds.size());
 
-        List<Content> newContentList = moviesToProcess.stream()
-                .map(this::fetchDetailsAndBuildContent)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+            Set<Integer> blacklistedTmdbIds = tmdbBlacklistRepository.findAllTmdbIds();
+            log.info("Found {} blacklisted movie IDs.", blacklistedTmdbIds.size());
 
-        // DB에 일괄 저장
-        if (!newContentList.isEmpty()) {
-            contentRepository.saveAll(newContentList);
-            log.info("Successfully saved {} new movies to the database.", newContentList.size());
-        } else {
-            log.info("No movies were saved after fetching details.");
+            List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess = movieDtos.stream()
+                    .filter(dto -> !existingTmdbIds.contains(dto.getId()))
+                    .filter(dto -> !blacklistedTmdbIds.contains(dto.getId()))
+                    .collect(Collectors.toList());
+
+            if (moviesToProcess.isEmpty()) {
+                log.info("Seeding job complete.");
+                return;
+            }
+
+            log.info("Fetching details for {} new movies...", moviesToProcess.size());
+
+            List<Content> newContentList = moviesToProcess.stream()
+                    .map(this::fetchDetailsAndBuildContent)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            if (!newContentList.isEmpty()) {
+                contentRepository.saveAll(newContentList);
+                log.info("Successfully saved {} new movies to the database.", newContentList.size());
+            } else {
+                log.info("No movies were saved after fetching details.");
+            }
+        } catch (InterruptedException e) {
+            // 락을 기다리는 도중 인터럽트 발생 시
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            // 시딩 로직 자체에서 예외 발생 시
+            log.error("Error during manual movie seeding: {}", e.getMessage(), e);
+        } finally {
+            if (acquired && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
     }
 
