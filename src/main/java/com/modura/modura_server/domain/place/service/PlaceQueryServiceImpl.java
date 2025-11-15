@@ -1,6 +1,8 @@
 package com.modura.modura_server.domain.place.service;
 
+import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.repository.ContentLikesRepository;
+import com.modura.modura_server.domain.content.repository.ContentRepository;
 import com.modura.modura_server.domain.place.converter.PlaceConverter;
 import com.modura.modura_server.domain.place.dto.PlaceResponseDTO;
 import com.modura.modura_server.domain.place.entity.Place;
@@ -19,6 +21,7 @@ import com.modura.modura_server.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +36,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     private final ReviewImageRepository reviewImageRepository;
     private final PlaceLikesRepository placeLikesRepository;
     private final ContentLikesRepository contentLikesRepository;
+    private final ContentRepository contentRepository;
     private final S3Service s3Service;
 
     @Override
@@ -179,5 +183,91 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 contentList,
                 reviewDTOs
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PlaceResponseDTO.GetPlaceListDTO getPlace(Long userId, String query) {
+
+        // 쿼리 유무에 따라 장소 목록 조회
+        List<Place> places = findPlaces(query);
+
+        if (places.isEmpty()) {
+            return PlaceConverter.toGetPlaceListDTO(Collections.emptyList());
+        }
+
+        List<Long> placeIds = places.stream().map(Place::getId).toList();
+
+        // 장소 '좋아요' 정보 일괄 조회
+        Set<Long> likedPlaceIds = placeLikesRepository.findIdsByUserIdAndPlaceIds(userId, placeIds);
+
+        // 리뷰 정보 일괄 조회 (평균, 개수 계산용)
+        Map<Long, List<PlaceReview>> reviewsByPlaceId = placeReviewRepository.findByPlaceIdIn(placeIds)
+                .stream()
+                .collect(Collectors.groupingBy(review -> review.getPlace().getId()));
+
+        // 연관된 컨텐츠 정보 일괄 조회 (스틸컷 기준)
+        Map<Long, List<Stillcut>> stillcutsByPlaceId = stillcutRepository.findByPlaceIdInWithContent(placeIds)
+                .stream()
+                .collect(Collectors.groupingBy(stillcut -> stillcut.getPlace().getId()));
+
+        List<PlaceResponseDTO.GetPlaceDTO> placeDTOList = places.stream().map(place -> {
+            boolean isLiked = likedPlaceIds.contains(place.getId());
+
+            List<PlaceReview> placeReviews = reviewsByPlaceId.getOrDefault(place.getId(), Collections.emptyList());
+            int reviewCount = placeReviews.size();
+            double reviewAvg = placeReviews.stream()
+                    .mapToDouble(PlaceReview::getRating)
+                    .average()
+                    .orElse(0.0);
+            reviewAvg = Math.round(reviewAvg * 10.0) / 10.0; // 소수점 첫째 자리
+
+            List<String> contentTitles = stillcutsByPlaceId.getOrDefault(place.getId(), Collections.emptyList())
+                    .stream()
+                    .map(stillcut -> stillcut.getContent().getTitleKr())
+                    .distinct()
+                    .toList();
+
+            return PlaceConverter.toGetPlaceDTO(place, isLiked, reviewAvg, reviewCount, contentTitles);
+        }).toList();
+
+        return PlaceConverter.toGetPlaceListDTO(placeDTOList);
+    }
+
+    private List<Place> findPlaces(String query) {
+        if (StringUtils.hasText(query)) {
+            List<Place> placesByName = placeRepository.searchByNameContaining(query);
+            List<Place> placesByContent = findPlacesByContentTitle(query);
+
+            return combinePlaces(placesByName, placesByContent);
+        } else {
+            return placeRepository.findAll();
+        }
+    }
+
+    private List<Place> findPlacesByContentTitle(String query) {
+
+        List<Content> contents = contentRepository.searchByTitleContaining(query);
+        if (contents.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Stillcut> stillcuts = stillcutRepository.findWithPlaceByContentIn(contents);
+
+        // Stillcut에서 Place 추출 (중복 제거)
+        return stillcuts.stream()
+                .map(Stillcut::getPlace) // LAZY 로딩이 아닌, 이미 Fetch된 Place 객체입니다.
+                .distinct()
+                .toList();
+    }
+
+    private List<Place> combinePlaces(List<Place> placesByName, List<Place> placesByContent) {
+        // Map을 사용하여 ID 기준 중복 제거
+        Map<Long, Place> combinedPlaceMap = new LinkedHashMap<>();
+
+        placesByName.forEach(place -> combinedPlaceMap.put(place.getId(), place));
+        placesByContent.forEach(place -> combinedPlaceMap.putIfAbsent(place.getId(), place));
+
+        return new ArrayList<>(combinedPlaceMap.values());
     }
 }

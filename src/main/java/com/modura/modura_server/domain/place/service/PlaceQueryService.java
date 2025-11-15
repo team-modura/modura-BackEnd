@@ -8,4 +8,5 @@ public interface PlaceQueryService {
     PlaceResponseDTO.GetPlaceReviewListDTO getPlaceReviewList(Long placeId);
     PlaceResponseDTO.ReviewItemDTO getPlaceReview(Long placeId, Long placeReviewId);
     PlaceResponseDTO.GetPlaceDetailDTO getPlaceDetail(Long placeId, Long userId);
+    PlaceResponseDTO.GetPlaceListDTO getPlace(Long userId, String query);
 }
