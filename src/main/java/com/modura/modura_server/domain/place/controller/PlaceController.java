@@ -9,6 +9,7 @@ import com.modura.modura_server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -150,6 +151,17 @@ public class PlaceController {
 
         Long userId = userDetails.getUser().getId();
         PlaceResponseDTO.GetPlaceDetailDTO response = placeQueryService.getPlaceDetail(placeId, userId);
+
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(summary = "촬영지 조회")
+    @GetMapping
+    public ApiResponse<PlaceResponseDTO.GetPlaceListDTO> getPlace(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                     @RequestParam(name = "query", required = false) String query) {
+
+        Long userId = userDetails.getUser().getId();
+        PlaceResponseDTO.GetPlaceListDTO response = placeQueryService.getPlace(userId, query);
 
         return ApiResponse.onSuccess(response);
     }

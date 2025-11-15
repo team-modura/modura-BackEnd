@@ -1,6 +1,5 @@
 package com.modura.modura_server.domain.place.dto;
 
-import com.modura.modura_server.domain.content.dto.ContentResponseDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -78,5 +77,31 @@ public class PlaceResponseDTO {
         String placeImageUrl;
         List<ContentItemDTO> contentList;
         List<ReviewItemDTO> reviews;
+    }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetPlaceDTO {
+
+        Long id;
+        String name;
+        Boolean isLiked;
+        String thumbnail;
+        Double rating;
+        Integer reviewCount;
+        Float latitude;
+        Float longitude;
+        List<String> content;
+    }
+
+    @Builder
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GetPlaceListDTO {
+
+        List<GetPlaceDTO> placeList;
     }
 }

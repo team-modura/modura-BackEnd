@@ -25,4 +25,7 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
 
     @Query("SELECT pr FROM PlaceReview pr JOIN FETCH pr.place p WHERE pr.user.id = :userId ORDER BY pr.createdAt DESC")
     List<PlaceReview> findAllByUserIdWithPlace(@Param("userId") Long userId);
+
+    @Query("SELECT pr FROM PlaceReview pr WHERE pr.place.id IN :placeIds")
+    List<PlaceReview> findByPlaceIdIn(@Param("placeIds") List<Long> placeIds);
 }
