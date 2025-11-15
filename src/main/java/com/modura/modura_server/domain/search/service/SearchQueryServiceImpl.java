@@ -6,16 +6,20 @@ import com.modura.modura_server.domain.content.repository.ContentRepository;
 import com.modura.modura_server.domain.place.entity.Place;
 import com.modura.modura_server.domain.place.repository.PlaceLikesRepository;
 import com.modura.modura_server.domain.place.repository.PlaceRepository;
+import com.modura.modura_server.domain.place.repository.PlaceReviewRepository;
 import com.modura.modura_server.domain.search.converter.SearchConverter;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 import com.modura.modura_server.domain.user.entity.Stillcut;
 import com.modura.modura_server.domain.user.repository.StillcutRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +30,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
     private final PlaceRepository placeRepository;
     private final PlaceLikesRepository placeLikesRepository;
     private final StillcutRepository stillcutRepository;
+    private final PlaceReviewRepository placeReviewRepository;
 
     private final SearchCommandService searchCommandService;
     private final RedisTemplate<String, String> redisTemplate;
@@ -93,6 +98,33 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         return SearchResponseDTO.GetPopularKeywordDTO.builder()
                 .keywords(keywordList)
                 .build();
+    }
+
+    @Override
+    public SearchResponseDTO.SearchPlaceListDTO getTopPlace(Long userId) {
+
+        Pageable topTen = PageRequest.of(0, 10);
+        List<Long> topPlaceIds = placeReviewRepository.findTopPlaceIdsByReviewCount(topTen);
+
+        if (topPlaceIds.isEmpty()) {
+            return SearchResponseDTO.SearchPlaceListDTO.builder()
+                    .placeList(Collections.emptyList())
+                    .build();
+        }
+
+        List<Place> places = placeRepository.findAllById(topPlaceIds);
+
+        Map<Long, Place> placeMap = places.stream()
+                .collect(Collectors.toMap(Place::getId, p -> p));
+
+        List<Place> orderedPlaces = topPlaceIds.stream()
+                .map(placeMap::get)
+                .filter(Objects::nonNull)
+                .toList();
+
+        Set<Long> likedPlaceIds = placeLikesRepository.findIdsByUserIdAndPlaceIds(userId, topPlaceIds);
+
+        return SearchConverter.toSearchPlaceListDTO(orderedPlaces, likedPlaceIds);
     }
 
     private List<Place> findPlacesByContentTitle(String query) {
