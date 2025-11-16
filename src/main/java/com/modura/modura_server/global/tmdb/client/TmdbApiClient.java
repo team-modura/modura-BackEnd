@@ -124,7 +124,6 @@ public class TmdbApiClient {
                 .uri(TMDB_BASE_URL, uriBuilder -> uriBuilder
                         .path("/discover/tv")
                         .queryParam("include_adult", "false")
-                        .queryParam("include_video", "false")
                         .queryParam("language", "ko-KR")
                         .queryParam("sort_by", "popularity.desc")
                         .queryParam("with_original_language", "ko")
