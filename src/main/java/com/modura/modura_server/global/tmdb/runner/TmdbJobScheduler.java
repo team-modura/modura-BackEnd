@@ -65,7 +65,7 @@ public class TmdbJobScheduler {
         boolean acquired = false;
         try {
             // 0초간 락 획득 시도 (대기 없음), 락 획득 시 60초간 임대
-            acquired = lock.tryLock(0, 60, TimeUnit.SECONDS);
+            acquired = lock.tryLock(0, 180, TimeUnit.SECONDS);
             if (!acquired) {
                 log.warn("Periodic TMDB Movie seeding job skipped: Seeding is already in progress.");
                 return false;
@@ -93,7 +93,7 @@ public class TmdbJobScheduler {
         boolean acquired = false;
         try {
             // 0초간 락 획득 시도 (대기 없음), 락 획득 시 60초간 임대
-            acquired = lock.tryLock(0, 60, TimeUnit.SECONDS);
+            acquired = lock.tryLock(0, 180, TimeUnit.SECONDS);
             if (!acquired) {
                 log.warn("Periodic TMDB TV seeding job skipped: Seeding is already in progress.");
                 return false;

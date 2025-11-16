@@ -102,7 +102,7 @@ public class TmdbApiClient {
                         .queryParam("include_adult", "false")
                         .queryParam("include_video", "false")
                         .queryParam("language", "ko-KR")
-                        .queryParam("sort_by", "primary_release_date.desc")
+                        .queryParam("sort_by", "first_air_date.desc")
                         .queryParam("with_original_language", "ko")
                         .queryParam("page", page)
                         .build())
