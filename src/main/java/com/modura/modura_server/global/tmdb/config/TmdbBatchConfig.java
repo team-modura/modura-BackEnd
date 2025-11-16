@@ -187,6 +187,7 @@ public class TmdbBatchConfig {
                         .stream()
                         .map(TmdbProviderResponseDTO.ProviderInfo::getProviderName)
                         .filter(Objects::nonNull)
+                        .filter(name -> !"Netflix Standard with Ads".equals(name))
                         .distinct()
                         .collect(Collectors.toList());
 
@@ -199,7 +200,7 @@ public class TmdbBatchConfig {
         };
     }
 
-    // 4. ItemWriter 정의
+    // 5. ItemWriter 정의
     @Bean
     @StepScope
     public ItemWriter<ProcessedContentData> newMovieItemWriter() {
@@ -268,8 +269,9 @@ public class TmdbBatchConfig {
     @Bean
     public Step tmdbTVSeedingStep() {
         return new StepBuilder("tmdbTVSeedingStep", jobRepository)
-                .<TmdbTVResponseDTO.TVResultDTO, TmdbTVResponseDTO.TVResultDTO>chunk(CHUNK_SIZE, transactionManager)
+                .<TmdbTVResponseDTO.TVResultDTO, ProcessedContentData>chunk(CHUNK_SIZE, transactionManager)
                 .reader(tmdbTVItemReader())
+                .processor(tmdbTVItemProcessor())
                 .writer(newTVItemWriter())
                 .build();
     }
@@ -298,34 +300,82 @@ public class TmdbBatchConfig {
         return new IteratorItemReader<>(tvQueue);
     }
 
-    // 4. ItemWriter 정의
+    // 4. ItemProcessor 정의
     @Bean
     @StepScope
-    public ItemWriter<TmdbTVResponseDTO.TVResultDTO> newTVItemWriter() {
+    public org.springframework.batch.item.ItemProcessor<TmdbTVResponseDTO.TVResultDTO, ProcessedContentData> tmdbTVItemProcessor() {
+        
+        return listDto -> {
+            
+            if (contentRepository.findAllByTmdbIdIn(Collections.singleton(listDto.getId())).size() > 0) {
+                log.debug("Skipping existing TV tmdbId: {}", listDto.getId());
+                return null;
+            }
 
-        return (Chunk<? extends TmdbTVResponseDTO.TVResultDTO> chunk) -> {
+            try {
+                int tmdbId = listDto.getId();
 
-            // 1. 현재 청크에 포함된 모든 tmdbId 조회
-            Set<Integer> incomingTmdbIds = chunk.getItems().stream()
-                    .map(TmdbTVResponseDTO.TVResultDTO::getId)
-                    .collect(Collectors.toSet());
+                
+                Mono<TmdbTVDetailResponseDTO> detailMono = tmdbApiClient.fetchTVDetails(tmdbId)
+                        .onErrorResume(e -> Mono.empty());
+                Mono<TmdbProviderResponseDTO> providerMono = tmdbApiClient.fetchTVProviders(tmdbId)
+                        .onErrorResume(e -> Mono.empty());
 
-            // 2. DB 조회를 1번만 실행하여, 이미 존재하는 tmdbId 목록 조회
-            Set<Integer> existingTmdbIds = contentRepository.findAllByTmdbIdIn(incomingTmdbIds)
-                    .stream()
-                    .map(Content::getTmdbId)
-                    .collect(Collectors.toSet());
+                Tuple2<TmdbTVDetailResponseDTO, TmdbProviderResponseDTO> responses =
+                        Mono.zip(detailMono, providerMono).block();
 
-            // 3. [필터링 -> API 호출 -> 변환] 작업을 Stream으로 처리
-            List<ContentWithCategories> processedItems = chunk.getItems().stream()
-                    .filter(listDto -> !existingTmdbIds.contains(listDto.getId()))
-                    .map(this::fetchTVDetailsAndBuildContent)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .collect(Collectors.toList());
-;
+                TmdbTVDetailResponseDTO detailDto = (responses != null) ? responses.getT1() : null;
+                TmdbProviderResponseDTO providerDto = (responses != null) ? responses.getT2() : null;
+
+                
+                if (detailDto == null) {
+                    log.warn("Skipping transformation due to missing detail data for TV tmdbId: {}", tmdbId);
+                    return null;
+                }
+
+                Content content = Content.builder()
+                        .titleKr(listDto.getName())
+                        .titleEng(detailDto.getName())
+                        .year(parseYearFromDate(listDto.getFirstAirDate()))
+                        .plot(listDto.getOverview())
+                        .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
+                        .type(1)
+                        .tmdbId(tmdbId)
+                        .build();
+
+                List<Category> categories = mapGenreIdsToCategories(listDto.getGenreIds());
+
+                List<String> platformNames = Optional.ofNullable(providerDto)
+                        .map(TmdbProviderResponseDTO::getResults)
+                        .map(TmdbProviderResponseDTO.Results::getKR)
+                        .map(TmdbProviderResponseDTO.ProviderCountryDetails::getFlatrate)
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .map(TmdbProviderResponseDTO.ProviderInfo::getProviderName)
+                        .filter(Objects::nonNull)
+                        .filter(name -> !"Netflix Standard with Ads".equals(name))
+                        .distinct()
+                        .collect(Collectors.toList());
+
+                return new ProcessedContentData(content, categories, platformNames);
+
+            } catch (Exception e) {
+                log.warn("Failed to process TV item for tmdbId {}: {}", listDto.getId(), e.getMessage(), e);
+                return null;
+            }
+        };
+    }
+    
+    // 5. ItemWriter 정의
+    @Bean
+    @StepScope
+    public ItemWriter<ProcessedContentData> newTVItemWriter() {
+
+        return (Chunk<? extends ProcessedContentData> chunk) -> {
+
+            List<ProcessedContentData> processedItems = new ArrayList<>(chunk.getItems());
             if (processedItems.isEmpty()) {
-                log.info("No new TV series items to save in this chunk.");
+                log.info("No new TV items to save in this chunk.");
                 return;
             }
 
@@ -333,13 +383,13 @@ public class TmdbBatchConfig {
             List<Content> newContentList = processedItems.stream()
                     .map(item -> item.content)
                     .collect(Collectors.toList());
-
-            log.info("Saving {} new TV series items to DB.", newContentList.size());
+            log.info("Saving {} new TV items to DB.", newContentList.size());
             contentRepository.saveAll(newContentList);
 
+            // ContentCategory 일괄 저장
             List<ContentCategory> newContentCategories = processedItems.stream()
                     .flatMap(item -> {
-                        Content savedContent = item.content;
+                        Content savedContent = item.content; // ID가 할당된 Content
                         return item.categories.stream()
                                 .map(category -> ContentCategory.builder()
                                         .content(savedContent)
@@ -348,71 +398,28 @@ public class TmdbBatchConfig {
                     })
                     .collect(Collectors.toList());
 
-            // ContentCategory 일괄 저장
             if (!newContentCategories.isEmpty()) {
-                log.info("Saving {} new content-category links for TV series.", newContentCategories.size());
+                log.info("Saving {} new content-category links for TV.", newContentCategories.size());
                 contentCategoryRepository.saveAll(newContentCategories);
             }
+
+            // Platform 일괄 저장
+            List<Platform> newPlatforms = processedItems.stream()
+                    .flatMap(item -> {
+                        Content savedContent = item.content;
+                        return item.platformNames.stream()
+                                .map(name -> Platform.builder()
+                                        .content(savedContent)
+                                        .name(name)
+                                        .build());
+                    })
+                    .collect(Collectors.toList());
+
+            if (!newPlatforms.isEmpty()) {
+                log.info("Saving {} new platform links for TV.", newPlatforms.size());
+                platformRepository.saveAll(newPlatforms);
+            }
         };
-    }
-
-    private Optional<ContentWithCategories> fetchMovieDetailsAndBuildContent(TmdbMovieResponseDTO.MovieResultDTO listDto) {
-        try {
-            TmdbMovieDetailResponseDTO detailDto = tmdbApiClient.fetchMovieDetails(listDto.getId()).block();
-            Thread.sleep(API_THROTTLE_MS); // API Throttling
-
-            if (detailDto == null) {
-                log.warn("Skipping transformation due to missing detail data for new tmdbId: {}", listDto.getId());
-                return Optional.empty();
-            }
-
-            Content content = Content.builder()
-                    .titleKr(listDto.getTitle())
-                    .titleEng(detailDto.getTitle())
-                    .year(parseYearFromDate(listDto.getReleaseDate()))
-                    .plot(listDto.getOverview())
-                    .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
-                    .runtime(detailDto.getRuntime())
-                    .type(2)
-                    .tmdbId(listDto.getId())
-                    .build();
-
-            List<Category> categories = mapGenreIdsToCategories(listDto.getGenreIds());
-
-            return Optional.of(new ContentWithCategories(content, categories));
-        } catch (Exception e) {
-            log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
-            return Optional.empty();
-        }
-    }
-
-    private Optional<ContentWithCategories> fetchTVDetailsAndBuildContent(TmdbTVResponseDTO.TVResultDTO listDto) {
-        try {
-            TmdbTVDetailResponseDTO detailDto = tmdbApiClient.fetchTVDetails(listDto.getId()).block();
-            Thread.sleep(API_THROTTLE_MS); // API Throttling
-
-            if (detailDto == null) {
-                log.warn("Skipping transformation due to missing detail data for new tmdbId: {}", listDto.getId());
-                return Optional.empty();
-            }
-
-            Content content = Content.builder()
-                    .titleKr(listDto.getName())
-                    .titleEng(detailDto.getName())
-                    .year(parseYearFromDate(listDto.getFirstAirDate()))
-                    .plot(listDto.getOverview())
-                    .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
-                    .type(1)
-                    .tmdbId(listDto.getId())
-                    .build();
-
-            List<Category> categories = mapGenreIdsToCategories(listDto.getGenreIds());
-
-            return Optional.of(new ContentWithCategories(content, categories));
-        } catch (Exception e) {
-            log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
-            return Optional.empty();
-        }
     }
 
     private List<Category> mapGenreIdsToCategories(List<Integer> genreIds) {
