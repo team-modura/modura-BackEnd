@@ -9,4 +9,5 @@ public interface SearchQueryService {
     SearchResponseDTO.GetPopularKeywordDTO getPopularKeyword();
     SearchResponseDTO.SearchPlaceListDTO getTopPlace(Long userId);
     SearchResponseDTO.GetTopContentListDTO getTopMovie(Long userId);
+    SearchResponseDTO.GetTopContentListDTO getTopSeries(Long userId);
 }

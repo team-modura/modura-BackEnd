@@ -52,7 +52,8 @@ public class TmdbJobScheduler {
         // 3. 캐시 갱신 (두 작업 중 하나라도 성공했다면 갱신)
         if (movieJobSuccess || tvJobSuccess) {
             log.info("Running periodic popular content cache refresh...");
-            popularContentService.refreshPopularContent();
+            popularContentService.refreshPopularMovies();
+            popularContentService.refreshPopularTVs();
         } else {
             log.warn("Skipping cache refresh as all seeding jobs failed or were skipped.");
         }
