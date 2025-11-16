@@ -3,14 +3,13 @@ package com.modura.modura_server.global.tmdb.config;
 import com.modura.modura_server.domain.content.entity.Category;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.entity.ContentCategory;
+import com.modura.modura_server.domain.content.entity.Platform;
 import com.modura.modura_server.domain.content.repository.CategoryRepository;
 import com.modura.modura_server.domain.content.repository.ContentCategoryRepository;
 import com.modura.modura_server.domain.content.repository.ContentRepository;
+import com.modura.modura_server.domain.content.repository.PlatformRepository;
 import com.modura.modura_server.global.tmdb.client.TmdbApiClient;
-import com.modura.modura_server.global.tmdb.dto.TmdbMovieDetailResponseDTO;
-import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
-import com.modura.modura_server.global.tmdb.dto.TmdbTVDetailResponseDTO;
-import com.modura.modura_server.global.tmdb.dto.TmdbTVResponseDTO;
+import com.modura.modura_server.global.tmdb.dto.*;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +27,8 @@ import org.springframework.batch.item.support.IteratorItemReader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
+import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -44,6 +45,7 @@ public class TmdbBatchConfig {
     private final ContentRepository contentRepository;
     private final ContentCategoryRepository contentCategoryRepository;
     private final CategoryRepository categoryRepository;
+    private final PlatformRepository platformRepository;
 
     private static final int CHUNK_SIZE = 20; // 한 번에 처리(Write)할 항목 수
     private static final int TOTAL_PAGES_TO_FETCH = 5; // 가져올 총 페이지 수
@@ -64,6 +66,19 @@ public class TmdbBatchConfig {
         }
     }
 
+    private static class ProcessedContentData {
+
+        final Content content;
+        final List<Category> categories;
+        final List<String> platformNames;
+
+        ProcessedContentData(Content content, List<Category> categories, List<String> platformNames) {
+            this.content = content;
+            this.categories = categories;
+            this.platformNames = platformNames;
+        }
+    }
+
     private static class ContentWithCategories {
 
         final Content content;
@@ -73,9 +88,6 @@ public class TmdbBatchConfig {
             this.content = content;
             this.categories = categories;
         }
-//
-//        Content getContent() { return content; }
-//        List<Category> getCategories() { return categories; }
     }
 
     // 1. Job 정의
@@ -91,8 +103,9 @@ public class TmdbBatchConfig {
     @Bean
     public Step tmdbMovieSeedingStep() {
         return new StepBuilder("tmdbMovieSeedingStep", jobRepository)
-                .<TmdbMovieResponseDTO.MovieResultDTO, TmdbMovieResponseDTO.MovieResultDTO>chunk(CHUNK_SIZE, transactionManager)
+                .<TmdbMovieResponseDTO.MovieResultDTO, ProcessedContentData>chunk(CHUNK_SIZE, transactionManager)
                 .reader(tmdbMovieItemReader())
+                .processor(tmdbMovieItemProcessor())
                 .writer(newMovieItemWriter())
                 .build();
     }
@@ -121,31 +134,79 @@ public class TmdbBatchConfig {
         return new IteratorItemReader<>(movieQueue);
     }
 
+    // 4. ItemProcessor 정의
+    @Bean
+    @StepScope
+    public org.springframework.batch.item.ItemProcessor<TmdbMovieResponseDTO.MovieResultDTO, ProcessedContentData> tmdbMovieItemProcessor() {
+        return listDto -> {
+            
+            if (contentRepository.findAllByTmdbIdIn(Collections.singleton(listDto.getId())).size() > 0) {
+                log.debug("Skipping existing movie tmdbId: {}", listDto.getId());
+                return null;
+            }
+
+            try {
+                int tmdbId = listDto.getId();
+
+                Mono<TmdbMovieDetailResponseDTO> detailMono = tmdbApiClient.fetchMovieDetails(tmdbId)
+                        .onErrorResume(e -> Mono.empty());
+                Mono<TmdbProviderResponseDTO> providerMono = tmdbApiClient.fetchMovieProviders(tmdbId)
+                        .onErrorResume(e -> Mono.empty());
+
+                // 두 API 호출이 모두 완료될 때까지 대기
+                Tuple2<TmdbMovieDetailResponseDTO, TmdbProviderResponseDTO> responses =
+                        Mono.zip(detailMono, providerMono).block();
+
+                TmdbMovieDetailResponseDTO detailDto = (responses != null) ? responses.getT1() : null;
+                TmdbProviderResponseDTO providerDto = (responses != null) ? responses.getT2() : null;
+
+                if (detailDto == null) {
+                    log.warn("Skipping transformation due to missing detail data for movie tmdbId: {}", tmdbId);
+                    return null;
+                }
+
+                Content content = Content.builder()
+                        .titleKr(listDto.getTitle())
+                        .titleEng(detailDto.getTitle())
+                        .year(parseYearFromDate(listDto.getReleaseDate()))
+                        .plot(listDto.getOverview())
+                        .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
+                        .runtime(detailDto.getRuntime())
+                        .type(2)
+                        .tmdbId(tmdbId)
+                        .build();
+
+                List<Category> categories = mapGenreIdsToCategories(listDto.getGenreIds());
+
+                // Provider 정보 파싱
+                List<String> platformNames = Optional.ofNullable(providerDto)
+                        .map(TmdbProviderResponseDTO::getResults)
+                        .map(TmdbProviderResponseDTO.Results::getKR)
+                        .map(TmdbProviderResponseDTO.ProviderCountryDetails::getFlatrate)
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .map(TmdbProviderResponseDTO.ProviderInfo::getProviderName)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+                return new ProcessedContentData(content, categories, platformNames);
+
+            } catch (Exception e) {
+                log.warn("Failed to process movie item for tmdbId {}: {}", listDto.getId(), e.getMessage(), e);
+                return null;
+            }
+        };
+    }
+
     // 4. ItemWriter 정의
     @Bean
     @StepScope
-    public ItemWriter<TmdbMovieResponseDTO.MovieResultDTO> newMovieItemWriter() {
-        return (Chunk<? extends TmdbMovieResponseDTO.MovieResultDTO> chunk) -> {
+    public ItemWriter<ProcessedContentData> newMovieItemWriter() {
 
-            // 1. 현재 청크에 포함된 모든 tmdbId 조회
-            Set<Integer> incomingTmdbIds = chunk.getItems().stream()
-                    .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
-                    .collect(Collectors.toSet());
+        return (Chunk<? extends ProcessedContentData> chunk) -> {
 
-            // 2. DB 조회를 1번만 실행하여, 이미 존재하는 tmdbId 목록 조회
-            Set<Integer> existingTmdbIds = contentRepository.findAllByTmdbIdIn(incomingTmdbIds)
-                    .stream()
-                    .map(Content::getTmdbId)
-                    .collect(Collectors.toSet());
-
-            // 3. [필터링 -> API 호출 -> 변환] 작업을 Stream으로 처리
-            List<ContentWithCategories> processedItems = chunk.getItems().stream()
-                    .filter(listDto -> !existingTmdbIds.contains(listDto.getId()))
-                    .map(this::fetchMovieDetailsAndBuildContent)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .collect(Collectors.toList());
-
+            List<ProcessedContentData> processedItems = new ArrayList<>(chunk.getItems());
             if (processedItems.isEmpty()) {
                 log.info("No new movie items to save in this chunk.");
                 return;
@@ -155,7 +216,6 @@ public class TmdbBatchConfig {
             List<Content> newContentList = processedItems.stream()
                     .map(item -> item.content)
                     .collect(Collectors.toList());
-
             log.info("Saving {} new movie items to DB.", newContentList.size());
             contentRepository.saveAll(newContentList);
 
@@ -174,6 +234,23 @@ public class TmdbBatchConfig {
             if (!newContentCategories.isEmpty()) {
                 log.info("Saving {} new content-category links for movies.", newContentCategories.size());
                 contentCategoryRepository.saveAll(newContentCategories);
+            }
+
+            // Platform 일괄 저장
+            List<Platform> newPlatforms = processedItems.stream()
+                    .flatMap(item -> {
+                        Content savedContent = item.content;
+                        return item.platformNames.stream()
+                                .map(name -> Platform.builder()
+                                        .content(savedContent)
+                                        .name(name)
+                                        .build());
+                    })
+                    .collect(Collectors.toList());
+
+            if (!newPlatforms.isEmpty()) {
+                log.info("Saving {} new platform links for movies.", newPlatforms.size());
+                platformRepository.saveAll(newPlatforms);
             }
         };
     }
