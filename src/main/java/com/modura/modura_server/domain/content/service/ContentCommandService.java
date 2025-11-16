@@ -9,4 +9,5 @@ public interface ContentCommandService {
     void postContentReview(Long contentId, Long userId, ContentRequestDTO.ReviewReqDTO reviewReqDTO);
     void patchContentReview(Long contentId, Long reviewId,Long userId, ContentRequestDTO.ReviewUpdateReqDTO reviewReqDTO);
     void deleteContentReview(Long contentId, Long reviewId, Long userId);
+    void postBlacklist(ContentRequestDTO.PostBlacklistDTO request);
 }

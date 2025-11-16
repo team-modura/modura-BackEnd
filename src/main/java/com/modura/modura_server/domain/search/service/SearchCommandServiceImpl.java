@@ -143,17 +143,28 @@ public class SearchCommandServiceImpl implements SearchCommandService {
             }
             log.info("Acquired movie seeding lock. Starting manual seeding...");
 
-            List<TmdbMovieResponseDTO.MovieResultDTO> movieDtos = fetchPopularMovies();
-            if (movieDtos.isEmpty()) {
+            List<TmdbMovieResponseDTO.MovieResultDTO> movieDTOs = fetchPopularMovies();
+            if (movieDTOs.isEmpty()) {
                 log.warn("No movies fetched from TMDB discover API. Seeding job stopping.");
                 return;
             }
 
-            Set<Integer> incomingTmdbIds = extractMovieIds(movieDtos);
+            // API 응답 목록에서 ID 기준으로 중복 제거
+            List<TmdbMovieResponseDTO.MovieResultDTO> uniqueMovieDTOs = new ArrayList<>(
+                    movieDTOs.stream()
+                            .collect(Collectors.toMap(
+                                    TmdbMovieResponseDTO.MovieResultDTO::getId,
+                                    dto -> dto,
+                                    (existing, replacement) -> existing
+                            ))
+                            .values()
+            );
+
+            Set<Integer> incomingTmdbIds = extractMovieIds(uniqueMovieDTOs);
             Set<Integer> existingTmdbIds = fetchExistingContentIds(incomingTmdbIds);
             Set<Integer> blacklistedTmdbIds = fetchBlacklistedIds();
 
-            List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess = movieDtos.stream()
+            List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess = uniqueMovieDTOs.stream()
                     .filter(dto -> !existingTmdbIds.contains(dto.getId()))
                     .filter(dto -> !blacklistedTmdbIds.contains(dto.getId()))
                     .collect(Collectors.toList());
@@ -220,17 +231,28 @@ public class SearchCommandServiceImpl implements SearchCommandService {
             }
             log.info("Acquired series seeding lock. Starting manual seeding...");
 
-            List<TmdbTVResponseDTO.TVResultDTO> seriesDtos = fetchPopularSeries();
-            if (seriesDtos.isEmpty()) {
+            List<TmdbTVResponseDTO.TVResultDTO> seriesDTOs = fetchPopularSeries();
+            if (seriesDTOs.isEmpty()) {
                 log.warn("No series fetched from TMDB discover API. Seeding job stopping.");
                 return;
             }
 
-            Set<Integer> incomingTmdbIds = extractSeriesIds(seriesDtos);
+            // API 응답 목록에서 ID 기준으로 중복 제거
+            List<TmdbTVResponseDTO.TVResultDTO> uniqueMovieDTOs = new ArrayList<>(
+                    seriesDTOs.stream()
+                            .collect(Collectors.toMap(
+                                    TmdbTVResponseDTO.TVResultDTO::getId,
+                                    dto -> dto,
+                                    (existing, replacement) -> existing
+                            ))
+                            .values()
+            );
+
+            Set<Integer> incomingTmdbIds = extractSeriesIds(uniqueMovieDTOs);
             Set<Integer> existingTmdbIds = fetchExistingContentIds(incomingTmdbIds);
             Set<Integer> blacklistedTmdbIds = fetchBlacklistedIds();
 
-            List<TmdbTVResponseDTO.TVResultDTO> seriesToProcess = seriesDtos.stream()
+            List<TmdbTVResponseDTO.TVResultDTO> seriesToProcess = uniqueMovieDTOs.stream()
                     .filter(dto -> !existingTmdbIds.contains(dto.getId()))
                     .filter(dto -> !blacklistedTmdbIds.contains(dto.getId()))
                     .collect(Collectors.toList());
@@ -412,7 +434,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
 
             if (detailDto == null) {
                 log.warn("Skipping movie. Failed to fetch details for new tmdbId: {}", listDto.getId());
-                return null;
+                return Optional.empty();
             }
 
             Content content = Content.builder()
@@ -431,7 +453,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
             return Optional.of(new ContentWithCategories(content, categories));
         } catch (Exception e) {
             log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
-            return null;
+            return Optional.empty();
         }
     }
 
