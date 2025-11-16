@@ -2,6 +2,8 @@ package com.modura.modura_server.global.tmdb.client;
 
 import com.modura.modura_server.global.tmdb.dto.TmdbMovieDetailResponseDTO;
 import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
+import com.modura.modura_server.global.tmdb.dto.TmdbTVDetailResponseDTO;
+import com.modura.modura_server.global.tmdb.dto.TmdbTVResponseDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -83,6 +85,73 @@ public class TmdbApiClient {
                 .header("Authorization", "Bearer " + TMDB_BEARER_TOKEN)
                 .retrieve()
                 .bodyToMono(TmdbMovieDetailResponseDTO.class)
+                .onErrorResume(e -> {
+                    log.warn("Failed to fetch details for tmdbId {}, skipping. Error: {}", tmdbId, e.getMessage());
+                    return Mono.empty();
+                });
+    }
+
+    /**
+     * [API 호출 1] 최신 TV 목록(Discover) 페이지 조회 (DB Seeding용)
+     */
+    public Mono<TmdbTVResponseDTO> fetchNewestTVs(int page) {
+
+        return webClient.get()
+                .uri(TMDB_BASE_URL, uriBuilder -> uriBuilder
+                        .path("/discover/tv")
+                        .queryParam("include_adult", "false")
+                        .queryParam("include_video", "false")
+                        .queryParam("language", "ko-KR")
+                        .queryParam("sort_by", "primary_release_date.desc")
+                        .queryParam("with_original_language", "ko")
+                        .queryParam("page", page)
+                        .build())
+                .header("Authorization", "Bearer " + TMDB_BEARER_TOKEN)
+                .retrieve()
+                .bodyToMono(TmdbTVResponseDTO.class)
+                .onErrorResume(e -> {
+                    log.warn("Failed to fetch newest tvs page {}: {}", page, e.getMessage());
+                    return Mono.empty(); // discover 실패 시 해당 페이지 스킵
+                });
+    }
+
+    /**
+     * [API 호출 2] 인기 TV 목록(Discover) 페이지 조회 (인기 컨텐츠 캐싱용)
+     */
+    public Mono<TmdbTVResponseDTO> fetchPopularTVs(int page) {
+
+        return webClient.get()
+                .uri(TMDB_BASE_URL, uriBuilder -> uriBuilder
+                        .path("/discover/tv")
+                        .queryParam("include_adult", "false")
+                        .queryParam("include_video", "false")
+                        .queryParam("language", "ko-KR")
+                        .queryParam("sort_by", "popularity.desc")
+                        .queryParam("with_original_language", "ko")
+                        .queryParam("page", page)
+                        .build())
+                .header("Authorization", "Bearer " + TMDB_BEARER_TOKEN)
+                .retrieve()
+                .bodyToMono(TmdbTVResponseDTO.class)
+                .onErrorResume(e -> {
+                    log.warn("Failed to fetch popular tvs page {}: {}", page, e.getMessage());
+                    return Mono.empty(); // discover 실패 시 해당 페이지 스킵
+                });
+    }
+
+    /**
+     * [API 호출 3] TV 상세 정보 조회 (DB Seeding용)
+     */
+    public Mono<TmdbTVDetailResponseDTO> fetchTVDetails(int tmdbId) {
+
+        return webClient.get()
+                .uri(TMDB_BASE_URL, uriBuilder -> uriBuilder
+                        .path("/tv/{series_id}")
+                        .queryParam("language", "en-US")
+                        .build(tmdbId))
+                .header("Authorization", "Bearer " + TMDB_BEARER_TOKEN)
+                .retrieve()
+                .bodyToMono(TmdbTVDetailResponseDTO.class)
                 .onErrorResume(e -> {
                     log.warn("Failed to fetch details for tmdbId {}, skipping. Error: {}", tmdbId, e.getMessage());
                     return Mono.empty();
