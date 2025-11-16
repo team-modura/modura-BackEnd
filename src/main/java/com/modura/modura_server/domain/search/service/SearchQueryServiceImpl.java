@@ -134,7 +134,28 @@ public class SearchQueryServiceImpl implements SearchQueryService {
     @Transactional(readOnly = true)
     public SearchResponseDTO.GetTopContentListDTO getTopMovie(Long userId) {
 
-        List<PopularContentCacheDTO> cachedContents = popularContentService.getPopularContent();
+        List<PopularContentCacheDTO> cachedContents = popularContentService.getPopularMovie();
+
+        if (cachedContents.isEmpty()) {
+            return SearchResponseDTO.GetTopContentListDTO.builder()
+                    .contentList(Collections.emptyList())
+                    .build();
+        }
+
+        List<Long> contentIds = cachedContents.stream()
+                .map(PopularContentCacheDTO::getId)
+                .collect(Collectors.toList());
+
+        // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
+        Set<Long> likedContentIds = contentLikesRepository.findIdsByUserIdAndContentIds(userId, contentIds);
+
+        return SearchConverter.toGetTopContentListDTOFromCache(cachedContents, likedContentIds);
+    }
+
+    @Override
+    public SearchResponseDTO.GetTopContentListDTO getTopSeries(Long userId) {
+
+        List<PopularContentCacheDTO> cachedContents = popularContentService.getPopularTVs();
 
         if (cachedContents.isEmpty()) {
             return SearchResponseDTO.GetTopContentListDTO.builder()

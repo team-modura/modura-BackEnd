@@ -5,6 +5,8 @@ import com.modura.modura_server.domain.content.repository.ContentRepository;
 import com.modura.modura_server.global.tmdb.client.TmdbApiClient;
 import com.modura.modura_server.global.tmdb.dto.TmdbMovieDetailResponseDTO;
 import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
+import com.modura.modura_server.global.tmdb.dto.TmdbTVDetailResponseDTO;
+import com.modura.modura_server.global.tmdb.dto.TmdbTVResponseDTO;
 import com.modura.modura_server.global.tmdb.repository.TmdbBlacklistRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Slf4j
 @Service
@@ -46,6 +47,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     private static final int MIN_KEYWORD_LENGTH = 2;
 
     private static final String SEED_MOVIE_LOCK_KEY = "lock:seedMovie";
+    private static final String SEED_TV_LOCK_KEY = "lock:seedTv";
 
     // 의미없는 문자 패턴 (자음/모음 단독, 특수문자 반복 등)
     private static final Pattern NOISE_PATTERN = Pattern.compile("[ㄱ-ㅎㅏ-ㅣ]+$|[^가-힣a-zA-Z0-9\\s]+$");
@@ -120,8 +122,8 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 return;
             }
 
-            Set<Integer> incomingTmdbIds = extractIds(movieDtos);
-            Set<Integer> existingTmdbIds = fetchExistingMovieIds(incomingTmdbIds);
+            Set<Integer> incomingTmdbIds = extractMovieIds(movieDtos);
+            Set<Integer> existingTmdbIds = fetchExistingContentIds(incomingTmdbIds);
             Set<Integer> blacklistedTmdbIds = fetchBlacklistedIds();
 
             List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess = movieDtos.stream()
@@ -134,8 +136,8 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 return;
             }
 
-            List<Content> newContentList = buildContentList(moviesToProcess);
-            saveIfNotEmpty(newContentList);
+            List<Content> newContentList = buildMovieList(moviesToProcess);
+            saveIfNotEmpty(newContentList, "movies");
         } catch (InterruptedException e) {
             // 락을 기다리는 도중 인터럽트 발생 시
             Thread.currentThread().interrupt();
@@ -150,10 +152,64 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         }
     }
 
+    @Async
+    @Override
+    public void seedSeries() {
+
+        RLock lock = redissonClient.getLock(SEED_TV_LOCK_KEY);
+        boolean acquired = false;
+
+        try {
+            // 10초간 락 획득 시도, 락 획득 시 3분간 임대
+            acquired = lock.tryLock(10, 180, TimeUnit.SECONDS);
+
+            // 락 획득 실패 시
+            if (!acquired) {
+                log.warn("Series seeding is already in progress.");
+                return;
+            }
+            log.info("Acquired series seeding lock. Starting manual seeding...");
+
+            List<TmdbTVResponseDTO.TVResultDTO> seriesDtos = fetchPopularSeries();
+            if (seriesDtos.isEmpty()) {
+                log.warn("No series fetched from TMDB discover API. Seeding job stopping.");
+                return;
+            }
+
+            Set<Integer> incomingTmdbIds = extractSeriesIds(seriesDtos);
+            Set<Integer> existingTmdbIds = fetchExistingContentIds(incomingTmdbIds);
+            Set<Integer> blacklistedTmdbIds = fetchBlacklistedIds();
+
+            List<TmdbTVResponseDTO.TVResultDTO> seriesToProcess = seriesDtos.stream()
+                    .filter(dto -> !existingTmdbIds.contains(dto.getId()))
+                    .filter(dto -> !blacklistedTmdbIds.contains(dto.getId()))
+                    .collect(Collectors.toList());
+
+            if (seriesToProcess.isEmpty()) {
+                log.info("Seeding job complete.");
+                return;
+            }
+
+            List<Content> newContentList = buildSeriesList(seriesToProcess);
+            saveIfNotEmpty(newContentList, "series");
+        } catch (InterruptedException e) {
+            // 락을 기다리는 도중 인터럽트 발생 시
+            Thread.currentThread().interrupt();
+            log.warn("Series seeding interrupted while waiting for lock.");
+        } catch (Exception e) {
+            // 시딩 로직 자체에서 예외 발생 시
+            log.error("Error during manual series seeding: {}", e.getMessage(), e);
+        } finally {
+            if (acquired && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
+
     @Transactional
-    public void saveMoviesInTransaction(List<Content> movies) {
+    public void saveContentsInTransaction(List<Content> contents) {
         transactionTemplate.executeWithoutResult(status -> {
-            contentRepository.saveAll(movies);
+            contentRepository.saveAll(contents);
         });
     }
 
@@ -175,30 +231,22 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         return allMovies;
     }
 
-    private Content fetchDetailsAndBuildContent(TmdbMovieResponseDTO.MovieResultDTO listDto) {
-        try {
-            TmdbMovieDetailResponseDTO detailDto = tmdbApiClient.fetchMovieDetails(listDto.getId()).block();
-            Thread.sleep(API_THROTTLE_MS);
+    private List<TmdbTVResponseDTO.TVResultDTO> fetchPopularSeries() {
 
-            if (detailDto == null) {
-                log.warn("Skipping movie. Failed to fetch details for new tmdbId: {}", listDto.getId());
-                return null;
+        List<TmdbTVResponseDTO.TVResultDTO> allSeries = new ArrayList<>();
+        for (int page = 1; page <= PAGES_TO_FETCH; page++) {
+            try {
+                log.debug("Fetching TMDB discover page: {}", page);
+                TmdbTVResponseDTO response = tmdbApiClient.fetchPopularTVs(page).block();
+                if (response != null && response.getResults() != null) {
+                    allSeries.addAll(response.getResults());
+                }
+                Thread.sleep(API_THROTTLE_MS);
+            } catch (Exception e) {
+                log.warn("Failed to fetch page {} from TMDB. Skipping.", page, e);
             }
-
-            return Content.builder()
-                    .titleKr(listDto.getTitle())
-                    .titleEng(detailDto.getTitle())
-                    .year(parseYearFromDate(listDto.getReleaseDate()))
-                    .plot(listDto.getOverview())
-                    .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
-                    .runtime(detailDto.getRuntime())
-                    .type(2)
-                    .tmdbId(listDto.getId())
-                    .build();
-        } catch (Exception e) {
-            log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
-            return null;
         }
+        return allSeries;
     }
 
     private Integer parseYearFromDate(String releaseDate) {
@@ -245,7 +293,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         return keywords;
     }
 
-    private Set<Integer> extractIds(List<TmdbMovieResponseDTO.MovieResultDTO> movieDtos) {
+    private Set<Integer> extractMovieIds(List<TmdbMovieResponseDTO.MovieResultDTO> movieDtos) {
         Set<Integer> ids = movieDtos.stream()
                 .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
                 .collect(Collectors.toSet());
@@ -253,34 +301,101 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         return ids;
     }
 
-    private Set<Integer> fetchExistingMovieIds(Set<Integer> tmdbIds) {
+    private Set<Integer> extractSeriesIds(List<TmdbTVResponseDTO.TVResultDTO> seriesDtos) {
+        Set<Integer> ids = seriesDtos.stream()
+                .map(TmdbTVResponseDTO.TVResultDTO::getId)
+                .collect(Collectors.toSet());
+        log.info("Fetched {} unique series IDs from TMDB.", ids.size());
+        return ids;
+    }
+
+    private Set<Integer> fetchExistingContentIds(Set<Integer> tmdbIds) {
         Set<Integer> existingIds = contentRepository.findAllByTmdbIdIn(tmdbIds)
                 .stream().map(Content::getTmdbId)
                 .collect(Collectors.toSet());
-        log.info("Found {} existing movie IDs in DB.", existingIds.size());
+        log.info("Found {} existing content IDs in DB.", existingIds.size());
         return existingIds;
     }
 
     private Set<Integer> fetchBlacklistedIds() {
         Set<Integer> blacklist = tmdbBlacklistRepository.findAllTmdbIds();
-        log.info("Found {} blacklisted movie IDs.", blacklist.size());
+        log.info("Found {} blacklisted content IDs.", blacklist.size());
         return blacklist;
     }
 
-    private List<Content> buildContentList(List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess) {
+    private List<Content> buildMovieList(List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess) {
         log.info("Fetching details for {} new movies...", moviesToProcess.size());
         return moviesToProcess.stream()
-                .map(this::fetchDetailsAndBuildContent)
+                .map(this::fetchDetailsAndBuildMovie)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
-    private void saveIfNotEmpty(List<Content> contents) {
+    private Content fetchDetailsAndBuildMovie(TmdbMovieResponseDTO.MovieResultDTO listDto) {
+        try {
+            TmdbMovieDetailResponseDTO detailDto = tmdbApiClient.fetchMovieDetails(listDto.getId()).block();
+            Thread.sleep(API_THROTTLE_MS);
+
+            if (detailDto == null) {
+                log.warn("Skipping movie. Failed to fetch details for new tmdbId: {}", listDto.getId());
+                return null;
+            }
+
+            return Content.builder()
+                    .titleKr(listDto.getTitle())
+                    .titleEng(detailDto.getTitle())
+                    .year(parseYearFromDate(listDto.getReleaseDate()))
+                    .plot(listDto.getOverview())
+                    .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
+                    .runtime(detailDto.getRuntime())
+                    .type(2)
+                    .tmdbId(listDto.getId())
+                    .build();
+        } catch (Exception e) {
+            log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
+            return null;
+        }
+    }
+
+    private List<Content> buildSeriesList(List<TmdbTVResponseDTO.TVResultDTO> seriesToProcess) {
+        log.info("Fetching details for {} new series...", seriesToProcess.size());
+        return seriesToProcess.stream()
+                .map(this::fetchDetailsAndBuildSeries)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private Content fetchDetailsAndBuildSeries(TmdbTVResponseDTO.TVResultDTO listDto) {
+        try {
+            TmdbTVDetailResponseDTO detailDto = tmdbApiClient.fetchTVDetails(listDto.getId()).block();
+            Thread.sleep(API_THROTTLE_MS);
+
+            if (detailDto == null) {
+                log.warn("Skipping series. Failed to fetch details for new tmdbId: {}", listDto.getId());
+                return null;
+            }
+
+            return Content.builder()
+                    .titleKr(listDto.getName())
+                    .titleEng(detailDto.getName())
+                    .year(parseYearFromDate(listDto.getFirstAirDate()))
+                    .plot(listDto.getOverview())
+                    .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
+                    .type(1)
+                    .tmdbId(listDto.getId())
+                    .build();
+        } catch (Exception e) {
+            log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
+            return null;
+        }
+    }
+
+    private void saveIfNotEmpty(List<Content> contents, String contentType) {
         if (!contents.isEmpty()) {
-            saveMoviesInTransaction(contents);
-            log.info("Successfully saved {} new movies to the database.", contents.size());
+            saveContentsInTransaction(contents);
+            log.info("Successfully saved {} new contents to the database.", contents.size());
         } else {
-            log.info("No movies were saved after fetching details.");
+            log.info("No contents were saved after fetching details.");
         }
     }
 }

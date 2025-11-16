@@ -5,6 +5,7 @@ import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.repository.*;
 import com.modura.modura_server.global.tmdb.client.TmdbApiClient;
 import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
+import com.modura.modura_server.global.tmdb.dto.TmdbTVResponseDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -23,7 +24,8 @@ public class PopularContentService {
 
     private final RedisTemplate<String, Object> redisCacheTemplate;
 
-    private static final String CACHE_KEY = "popular:content";
+    private static final String MOVIE_CACHE_KEY = "popular:movie";
+    private static final String TV_CACHE_KEY = "popular:tv";
     private static final Duration CACHE_DURATION = Duration.ofHours(1);
 
     private static final int TARGET_COUNT = 10;
@@ -38,26 +40,15 @@ public class PopularContentService {
         this.redisCacheTemplate = redisCacheTemplate;
     }
 
-    public List<PopularContentCacheDTO> getPopularContent() {
-        try {
-            List<PopularContentCacheDTO> cachedList = (List<PopularContentCacheDTO>) redisCacheTemplate.opsForValue().get(CACHE_KEY);
-
-            if (cachedList != null) {
-                log.debug("Popular content cache hit.");
-                return cachedList;
-            }
-        } catch (Exception e) {
-            log.error("Failed to retrieve popular content from Redis cache", e);
-        }
-        log.warn("Popular content cache miss.");
-        return Collections.emptyList();
+    public List<PopularContentCacheDTO> getPopularMovie() {
+        return getFromCache(MOVIE_CACHE_KEY);
     }
 
-    public void refreshPopularContent() {
-        log.info("Starting to refresh popular content cache...");
+    public void refreshPopularMovies() {
+        log.info("Starting to refresh popular movie cache...");
 
         // 1. TMDB에서 인기 영화 ID 목록 조회
-        List<Integer> allTmdbIds = fetchPopularTmdbIdsFromAPI();
+        List<Integer> allTmdbIds = fetchPopularMovieTmdbIdsFromAPI();
         if (allTmdbIds.isEmpty()) {
             log.warn("Failed to fetch any popular movies from TMDB. Cache refresh aborted.");
             return;
@@ -71,10 +62,10 @@ public class PopularContentService {
         }
 
         // 3. Redis에 캐시 저장
-        saveContentsToCache(popularContents);
+        saveToCache(MOVIE_CACHE_KEY, popularContents, "Movie");
     }
 
-    private List<Integer> fetchPopularTmdbIdsFromAPI() {
+    private List<Integer> fetchPopularMovieTmdbIdsFromAPI() {
 
         List<Integer> allTmdbIds = new ArrayList<>();
 
@@ -98,6 +89,73 @@ public class PopularContentService {
             }
         }
         return allTmdbIds;
+    }
+
+    public List<PopularContentCacheDTO> getPopularTVs() {
+        return getFromCache(TV_CACHE_KEY);
+    }
+
+    public void refreshPopularTVs() {
+        log.info("Starting to refresh popular TV cache...");
+
+        // 1. TMDB에서 인기 영화 ID 목록 조회
+        List<Integer> allTmdbIds = fetchPopularTVTmdbIdsFromAPI();
+        if (allTmdbIds.isEmpty()) {
+            log.warn("Failed to fetch any popular TVs from TMDB. Cache refresh aborted.");
+            return;
+        }
+
+        // 2. DB에 존재하는 영화만 필터링 및 DTO 변환
+        List<PopularContentCacheDTO> popularContents = filterAndTransformToCacheDTO(allTmdbIds);
+        if (popularContents.isEmpty()) {
+            log.warn("No popular contents found in our DB from the fetched TMDB list. Cache will not be updated.");
+            return;
+        }
+
+        // 3. Redis에 캐시 저장
+        saveToCache(TV_CACHE_KEY, popularContents, "TV");
+    }
+
+    private List<Integer> fetchPopularTVTmdbIdsFromAPI() {
+
+        List<Integer> allTmdbIds = new ArrayList<>();
+
+        for (int page = 1; page <= MAX_PAGES_TO_FETCH; page++) {
+            if (allTmdbIds.size() >= TARGET_COUNT * FETCH_BUFFER_MULTIPLIER) {
+                break;
+            }
+            try {
+                TmdbTVResponseDTO response = tmdbApiClient.fetchPopularTVs(page)
+                        .block(Duration.ofSeconds(10));
+
+                if (response != null && response.getResults() != null) {
+                    allTmdbIds.addAll(
+                            response.getResults().stream()
+                                    .map(TmdbTVResponseDTO.TVResultDTO::getId)
+                                    .collect(Collectors.toList())
+                    );
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch popular TVs page {}. Skipping. Error: {}", page, e.getMessage());
+            }
+        }
+        return allTmdbIds;
+    }
+
+    private List<PopularContentCacheDTO> getFromCache(String cacheKey) {
+
+        try {
+            List<PopularContentCacheDTO> cachedList = (List<PopularContentCacheDTO>) redisCacheTemplate.opsForValue().get(cacheKey);
+
+            if (cachedList != null) {
+                log.debug("Popular content cache hit for key: {}", cacheKey);
+                return cachedList;
+            }
+        } catch (Exception e) {
+            log.error("Failed to retrieve popular content from Redis cache (key: {})", cacheKey, e);
+        }
+        log.warn("Popular content cache miss for key: {}", cacheKey);
+        return Collections.emptyList();
     }
 
     private List<PopularContentCacheDTO> filterAndTransformToCacheDTO(List<Integer> allTmdbIds) {
@@ -128,13 +186,12 @@ public class PopularContentService {
                 .build();
     }
 
-    private void saveContentsToCache(List<PopularContentCacheDTO> contents) {
-
+    private void saveToCache(String cacheKey, List<PopularContentCacheDTO> contents, String type) {
         try {
-            redisCacheTemplate.opsForValue().set(CACHE_KEY, contents, CACHE_DURATION);
-            log.info("Popular content cache refreshed successfully. Total {} items.", contents.size());
+            redisCacheTemplate.opsForValue().set(cacheKey, contents, CACHE_DURATION);
+            log.info("Popular {} content cache refreshed successfully. Total {} items.", type, contents.size());
         } catch (Exception e) {
-            log.error("Failed to save popular content to Redis cache", e);
+            log.error("Failed to save popular {} content to Redis cache (key: {})", type, cacheKey, e);
         }
     }
 }

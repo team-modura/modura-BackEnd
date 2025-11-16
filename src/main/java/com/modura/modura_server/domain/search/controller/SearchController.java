@@ -74,12 +74,30 @@ public class SearchController {
         return ApiResponse.onSuccess(response);
     }
 
-    @Operation(summary = "TMDB Movie Seeding",
-            description = "인기순으로 영화 500개 저장")
+    @Operation(summary = "TMDB Movie Seeding", description = "인기순으로 영화 500개 저장")
     @PostMapping("/seeding/movie")
     public ApiResponse<Void> seedMovie() {
 
         searchCommandService.seedMovie();
+
+        return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "TOP 10 시리즈 조회")
+    @GetMapping("/top/series")
+    public ApiResponse<SearchResponseDTO.GetTopContentListDTO> getTopSeries(@AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        SearchResponseDTO.GetTopContentListDTO response = searchQueryService.getTopSeries(userId);
+
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(summary = "TMDB Series Seeding", description = "인기순으로 시리즈 500개 저장")
+    @PostMapping("/seeding/series")
+    public ApiResponse<Void> seedSeries() {
+
+        searchCommandService.seedSeries();
 
         return ApiResponse.onSuccess(null);
     }
