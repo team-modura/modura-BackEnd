@@ -32,5 +32,8 @@ public class TmdbTVResponseDTO {
 
         @JsonProperty("first_air_date")
         private String firstAirDate;
+
+        @JsonProperty("genre_ids")
+        private List<Integer> genreIds;
     }
 }

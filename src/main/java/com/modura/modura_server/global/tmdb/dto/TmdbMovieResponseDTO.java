@@ -32,5 +32,8 @@ public class TmdbMovieResponseDTO {
 
         @JsonProperty("release_date")
         private String releaseDate;
+
+        @JsonProperty("genre_ids")
+        private List<Integer> genreIds;
     }
 }
