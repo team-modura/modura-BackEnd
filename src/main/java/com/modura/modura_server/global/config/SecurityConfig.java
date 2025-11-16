@@ -52,7 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/signup", "/auth/login", "/auth/token").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        .requestMatchers("/search/seeding/movie", "/search/seeding/series", "contents/blacklist").hasRole("ADMIN")
+                        .requestMatchers("/search/seeding/movie", "/search/seeding/series", "/contents/blacklist").hasRole("ADMIN")
                         .requestMatchers("/auth/withdrawal", "/users/**", "/contents/**", "/places/**", "/search/**", "/s3/**").hasAnyRole("ADMIN", "USER")
                         .requestMatchers("/auth/reactivate").hasRole("INACTIVE")
                         .requestMatchers("/auth/reissue", "/auth/logout").hasAnyRole("ADMIN", "USER", "INACTIVE")

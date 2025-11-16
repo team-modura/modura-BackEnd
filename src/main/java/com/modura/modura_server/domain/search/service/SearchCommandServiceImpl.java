@@ -149,7 +149,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 return;
             }
 
-            // API 응답 목록(movieDtos)에서 ID 기준으로 중복 제거
+            // API 응답 목록에서 ID 기준으로 중복 제거
             List<TmdbMovieResponseDTO.MovieResultDTO> uniqueMovieDTOs = new ArrayList<>(
                     movieDTOs.stream()
                             .collect(Collectors.toMap(
@@ -237,7 +237,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 return;
             }
 
-            // API 응답 목록(movieDtos)에서 ID 기준으로 중복 제거
+            // API 응답 목록에서 ID 기준으로 중복 제거
             List<TmdbTVResponseDTO.TVResultDTO> uniqueMovieDTOs = new ArrayList<>(
                     seriesDTOs.stream()
                             .collect(Collectors.toMap(
@@ -434,7 +434,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
 
             if (detailDto == null) {
                 log.warn("Skipping movie. Failed to fetch details for new tmdbId: {}", listDto.getId());
-                return null;
+                return Optional.empty();
             }
 
             Content content = Content.builder()
@@ -453,7 +453,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
             return Optional.of(new ContentWithCategories(content, categories));
         } catch (Exception e) {
             log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
-            return null;
+            return Optional.empty();
         }
     }
 
