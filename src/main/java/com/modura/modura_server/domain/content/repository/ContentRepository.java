@@ -2,6 +2,7 @@ package com.modura.modura_server.domain.content.repository;
 
 import com.modura.modura_server.domain.content.entity.Content;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,4 +21,8 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
             "JOIN ContentLikes cl ON c.id = cl.content.id " +
             "WHERE cl.user.id = :userId AND c.type = :contentType")
     List<Content> findLikedContentsByUserAndType(@Param("userId") Long userId, @Param("contentType") Integer contentType);
+
+    @Modifying
+    @Query("DELETE FROM Content c WHERE c.tmdbId IN :tmdbIds")
+    void deleteByTmdbIdIn(@Param("tmdbIds") Collection<Integer> tmdbIds);
 }

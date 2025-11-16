@@ -3,9 +3,11 @@ package com.modura.modura_server.domain.user.repository;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.user.entity.Stillcut;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface StillcutRepository extends JpaRepository<Stillcut, Long> {
@@ -21,4 +23,8 @@ public interface StillcutRepository extends JpaRepository<Stillcut, Long> {
 
     @Query("SELECT s FROM Stillcut s JOIN FETCH s.content c WHERE s.place.id IN :placeIds")
     List<Stillcut> findByPlaceIdInWithContent(@Param("placeIds") List<Long> placeIds);
+
+    @Modifying
+    @Query("DELETE FROM Stillcut s WHERE s.content.id IN :contentIds")
+    void deleteByContentIdIn(@Param("contentIds") Collection<Long> contentIds);
 }

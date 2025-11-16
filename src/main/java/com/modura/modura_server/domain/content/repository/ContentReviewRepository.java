@@ -3,9 +3,11 @@ package com.modura.modura_server.domain.content.repository;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.entity.ContentReview;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,4 +29,8 @@ public interface ContentReviewRepository extends JpaRepository<ContentReview, Lo
 
     @Query("SELECT cr FROM ContentReview cr JOIN FETCH cr.content c WHERE cr.user.id = :userId AND c.type = :contentType ORDER BY cr.createdAt DESC")
     List<ContentReview> findAllByUserIdAndContentTypeWithContent(@Param("userId") Long userId, @Param("contentType") Integer contentType);
+
+    @Modifying
+    @Query("DELETE FROM ContentReview cr WHERE cr.content.id IN :contentIds")
+    void deleteByContentIdIn(@Param("contentIds") Collection<Long> contentIds);
 }
