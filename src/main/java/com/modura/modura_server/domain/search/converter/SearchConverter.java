@@ -5,7 +5,9 @@ import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.place.entity.Place;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -59,12 +61,15 @@ public class SearchConverter {
                 .build();
     }
 
-    public static SearchResponseDTO.GetTopContentListDTO toGetTopContentListDTOFromCache(List<PopularContentCacheDTO> contentList, Set<Long> likedContentIds){
+    public static SearchResponseDTO.GetTopContentListDTO toGetTopContentListDTOFromCache(List<PopularContentCacheDTO> contentList,
+                                                                                         Set<Long> likedContentIds,
+                                                                                         Map<Long, List<String>> platformsByContentId){
 
         List<SearchResponseDTO.GetTopContentDTO> contentDTOList = contentList.stream()
                 .map(cacheDto -> {
                     boolean isLiked = likedContentIds.contains(cacheDto.getId());
-                    return toGetTopContentDTOFromCache(cacheDto, isLiked);
+                    List<String> platforms = platformsByContentId.getOrDefault(cacheDto.getId(), Collections.emptyList());
+                    return toGetTopContentDTOFromCache(cacheDto, isLiked, platforms);
                 })
                 .collect(Collectors.toList());
 
@@ -73,13 +78,16 @@ public class SearchConverter {
                 .build();
     }
 
-    public static SearchResponseDTO.GetTopContentDTO toGetTopContentDTOFromCache(PopularContentCacheDTO cacheDTO, boolean isLiked) {
+    public static SearchResponseDTO.GetTopContentDTO toGetTopContentDTOFromCache(PopularContentCacheDTO cacheDTO,
+                                                                                 boolean isLiked,
+                                                                                 List<String> platforms) {
 
         return SearchResponseDTO.GetTopContentDTO.builder()
                 .id(cacheDTO.getId())
                 .title(cacheDTO.getTitleKr())
                 .isLiked(isLiked)
                 .thumbnail(cacheDTO.getThumbnail())
+                .platforms(platforms)
                 .build();
     }
 }
