@@ -1,10 +1,9 @@
 package com.modura.modura_server.domain.content.dto;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 import lombok.*;
+
+import java.util.List;
 
 @Getter
 @Builder
@@ -27,5 +26,15 @@ public class ContentRequestDTO {
         @Min(1) @Max(5)
         private Integer rating;
         private String comment;
+    }
+
+    @Builder
+    @AllArgsConstructor
+    @Getter
+    @NoArgsConstructor
+    public static class PostBlacklistDTO {
+
+        @NotEmpty(message = "TMDB ID 목록은 비어있을 수 없습니다.")
+        List<Integer> tmdbIds;
     }
 }

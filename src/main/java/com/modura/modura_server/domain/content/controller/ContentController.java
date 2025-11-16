@@ -104,4 +104,13 @@ public class ContentController {
         contentCommandService.deleteContentReview(contentId, reviewId, userId);
         return ApiResponse.onSuccess(null);
     }
+
+    @Operation(summary = "TMDB 블랙리스트 등록")
+    @PostMapping("/blacklist")
+    public ApiResponse<Void> postBlacklist(@Valid @RequestBody ContentRequestDTO.PostBlacklistDTO request) {
+
+        contentCommandService.postBlacklist(request);
+
+        return ApiResponse.onSuccess(null);
+    }
 }
