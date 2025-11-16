@@ -29,7 +29,7 @@ public class UserController {
     @Operation(summary = "유저 정보 등록")
     @PatchMapping
     public ApiResponse<Void> updateUser(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                                              @Valid @RequestBody UserRequestDTO.UpdateUserDTO request) {
+                                        @Valid @RequestBody UserRequestDTO.UpdateUserDTO request) {
 
         Long userId = userDetails.getUser().getId();
         userCommandService.updateUser(userId, request);
@@ -40,7 +40,7 @@ public class UserController {
     @Operation(summary = "찜한 컨텐츠 조회")
     @GetMapping("/likes/contents")
     public ApiResponse<SearchResponseDTO.SearchContentListDTO> getLikedContent(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                                                              @RequestParam(name = "type") @NotBlank String type) {
+                                                                               @RequestParam(name = "type") @NotBlank String type) {
 
         Long userId = userDetails.getUser().getId();
         SearchResponseDTO.SearchContentListDTO response = userQueryService.getLikedContent(userId, type);
@@ -82,11 +82,22 @@ public class UserController {
     @Operation(summary = "작성한 리뷰 조회")
     @GetMapping("/reviews")
     public ApiResponse<UserResponseDTO.GetReviewListDTO> getReview(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                                                               @RequestParam(name = "type") @NotBlank String type) {
+                                                                   @RequestParam(name = "type") @NotBlank String type) {
 
         Long userId = userDetails.getUser().getId();
         UserResponseDTO.GetReviewListDTO response = userQueryService.getReview(userId, type);
 
         return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(summary = "유저 스틸컷 삭제")
+    @DeleteMapping("/stillcuts/{stillcutId}")
+    public ApiResponse<Void> delMyStillcut(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                             @PathVariable Long stillcutId) {
+
+        Long userId = userDetails.getUser().getId();
+        userCommandService.delMyStillcut(userId, stillcutId);
+
+        return ApiResponse.onSuccess(null);
     }
 }
