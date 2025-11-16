@@ -173,7 +173,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
             // ContentCategory 저장
             List<ContentCategory> newContentCategories = processedItems.stream()
                     .flatMap(item -> {
-                        Content savedContent = item.content; // saveAll을 통해 ID가 할당됨
+                        Content savedContent = item.content;
                         return item.categories.stream()
                                 .map(category -> ContentCategory.builder()
                                         .content(savedContent)
@@ -240,8 +240,31 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 return;
             }
 
-            List<Content> newContentList = buildSeriesList(seriesToProcess);
+            List<ContentWithCategories> processedItems = buildSeriesList(seriesToProcess);
+            List<Content> newContentList = processedItems.stream()
+                    .map(item -> item.content)
+                    .collect(Collectors.toList());
+
             saveIfNotEmpty(newContentList, "series");
+
+            // ContentCategory 저장
+            List<ContentCategory> newContentCategories = processedItems.stream()
+                    .flatMap(item -> {
+                        Content savedContent = item.content;
+                        return item.categories.stream()
+                                .map(category -> ContentCategory.builder()
+                                        .content(savedContent)
+                                        .category(category)
+                                        .build());
+                    })
+                    .collect(Collectors.toList());
+
+            if (!newContentCategories.isEmpty()) {
+                log.info("Saving {} new content-category links for series.", newContentCategories.size());
+                transactionTemplate.executeWithoutResult(status -> {
+                    contentCategoryRepository.saveAll(newContentCategories);
+                });
+            }
         } catch (InterruptedException e) {
             // 락을 기다리는 도중 인터럽트 발생 시
             Thread.currentThread().interrupt();
@@ -412,25 +435,26 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         }
     }
 
-    private List<Content> buildSeriesList(List<TmdbTVResponseDTO.TVResultDTO> seriesToProcess) {
+    private List<ContentWithCategories> buildSeriesList(List<TmdbTVResponseDTO.TVResultDTO> seriesToProcess) {
         log.info("Fetching details for {} new series...", seriesToProcess.size());
         return seriesToProcess.stream()
                 .map(this::fetchDetailsAndBuildSeries)
-                .filter(Objects::nonNull)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(Collectors.toList());
     }
 
-    private Content fetchDetailsAndBuildSeries(TmdbTVResponseDTO.TVResultDTO listDto) {
+    private Optional<ContentWithCategories> fetchDetailsAndBuildSeries(TmdbTVResponseDTO.TVResultDTO listDto) {
         try {
             TmdbTVDetailResponseDTO detailDto = tmdbApiClient.fetchTVDetails(listDto.getId()).block();
             Thread.sleep(API_THROTTLE_MS);
 
             if (detailDto == null) {
                 log.warn("Skipping series. Failed to fetch details for new tmdbId: {}", listDto.getId());
-                return null;
+                return Optional.empty();
             }
 
-            return Content.builder()
+            Content content = Content.builder()
                     .titleKr(listDto.getName())
                     .titleEng(detailDto.getName())
                     .year(parseYearFromDate(listDto.getFirstAirDate()))
@@ -439,9 +463,14 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                     .type(1)
                     .tmdbId(listDto.getId())
                     .build();
+
+            List<Category> categories = mapGenreIdsToCategories(listDto.getGenreIds());
+
+            return Optional.of(new ContentWithCategories(content, categories));
+
         } catch (Exception e) {
             log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
-            return null;
+            return Optional.empty();
         }
     }
 

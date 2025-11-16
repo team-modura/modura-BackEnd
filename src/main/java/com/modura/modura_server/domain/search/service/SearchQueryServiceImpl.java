@@ -2,8 +2,10 @@ package com.modura.modura_server.domain.search.service;
 
 import com.modura.modura_server.domain.content.dto.PopularContentCacheDTO;
 import com.modura.modura_server.domain.content.entity.Content;
+import com.modura.modura_server.domain.content.entity.Platform;
 import com.modura.modura_server.domain.content.repository.ContentLikesRepository;
 import com.modura.modura_server.domain.content.repository.ContentRepository;
+import com.modura.modura_server.domain.content.repository.PlatformRepository;
 import com.modura.modura_server.domain.place.entity.Place;
 import com.modura.modura_server.domain.place.repository.PlaceLikesRepository;
 import com.modura.modura_server.domain.place.repository.PlaceRepository;
@@ -33,6 +35,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
     private final StillcutRepository stillcutRepository;
     private final PlaceReviewRepository placeReviewRepository;
     private final PopularContentService popularContentService;
+    private final PlatformRepository platformRepository;
 
     private final SearchCommandService searchCommandService;
     private final RedisTemplate<String, String> redisTemplate;
@@ -149,7 +152,14 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
         Set<Long> likedContentIds = contentLikesRepository.findIdsByUserIdAndContentIds(userId, contentIds);
 
-        return SearchConverter.toGetTopContentListDTOFromCache(cachedContents, likedContentIds);
+        Map<Long, List<String>> platformsByContentId = platformRepository.findByContent_IdIn(contentIds)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        platform -> platform.getContent().getId(), // Content ID로 그룹화
+                        Collectors.mapping(Platform::getName, Collectors.toList()) // 플랫폼 이름만 리스트로
+                ));
+
+        return SearchConverter.toGetTopContentListDTOFromCache(cachedContents, likedContentIds, platformsByContentId);
     }
 
     @Override
@@ -170,7 +180,14 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
         Set<Long> likedContentIds = contentLikesRepository.findIdsByUserIdAndContentIds(userId, contentIds);
 
-        return SearchConverter.toGetTopContentListDTOFromCache(cachedContents, likedContentIds);
+        Map<Long, List<String>> platformsByContentId = platformRepository.findByContent_IdIn(contentIds)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        platform -> platform.getContent().getId(), // Content ID로 그룹화
+                        Collectors.mapping(Platform::getName, Collectors.toList()) // 플랫폼 이름만 리스트로
+                ));
+
+        return SearchConverter.toGetTopContentListDTOFromCache(cachedContents, likedContentIds, platformsByContentId);
     }
 
     private List<Place> findPlacesByContentTitle(String query) {

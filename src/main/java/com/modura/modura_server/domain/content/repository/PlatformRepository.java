@@ -7,5 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface PlatformRepository extends JpaRepository<Platform, Long> {
+
     List<Platform> findByContent(Content content);
+    List<Platform> findByContent_IdIn(List<Long> contentIds);
 }

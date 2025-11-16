@@ -70,6 +70,7 @@ public class SearchResponseDTO {
         String title;
         Boolean isLiked;
         String thumbnail;
+        List<String> platforms;
     }
 
     @Builder

@@ -1,9 +1,6 @@
 package com.modura.modura_server.global.tmdb.client;
 
-import com.modura.modura_server.global.tmdb.dto.TmdbMovieDetailResponseDTO;
-import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
-import com.modura.modura_server.global.tmdb.dto.TmdbTVDetailResponseDTO;
-import com.modura.modura_server.global.tmdb.dto.TmdbTVResponseDTO;
+import com.modura.modura_server.global.tmdb.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -92,6 +89,24 @@ public class TmdbApiClient {
     }
 
     /**
+     * [API 호출 4] 영화 Provider 정보 조회 (DB Seeding용)
+     */
+    public Mono<TmdbProviderResponseDTO> fetchMovieProviders(int tmdbId) {
+
+        return webClient.get()
+                .uri(TMDB_BASE_URL, uriBuilder -> uriBuilder
+                        .path("/movie/{movie_id}/watch/providers")
+                        .build(tmdbId))
+                .header("Authorization", "Bearer " + TMDB_BEARER_TOKEN)
+                .retrieve()
+                .bodyToMono(TmdbProviderResponseDTO.class)
+                .onErrorResume(e -> {
+                    log.warn("Failed to fetch providers for movie tmdbId {}, skipping. Error: {}", tmdbId, e.getMessage());
+                    return Mono.empty(); // 실패 시 빈 Mono 반환
+                });
+    }
+
+    /**
      * [API 호출 1] 최신 TV 목록(Discover) 페이지 조회 (DB Seeding용)
      */
     public Mono<TmdbTVResponseDTO> fetchNewestTVs(int page) {
@@ -154,6 +169,24 @@ public class TmdbApiClient {
                 .onErrorResume(e -> {
                     log.warn("Failed to fetch details for tmdbId {}, skipping. Error: {}", tmdbId, e.getMessage());
                     return Mono.empty();
+                });
+    }
+
+    /**
+     * [API 호출 4] TV Provider 정보 조회 (DB Seeding용)
+     */
+    public Mono<TmdbProviderResponseDTO> fetchTVProviders(int tmdbId) {
+
+        return webClient.get()
+                .uri(TMDB_BASE_URL, uriBuilder -> uriBuilder
+                        .path("/tv/{series_id}/watch/providers")
+                        .build(tmdbId))
+                .header("Authorization", "Bearer " + TMDB_BEARER_TOKEN)
+                .retrieve()
+                .bodyToMono(TmdbProviderResponseDTO.class)
+                .onErrorResume(e -> {
+                    log.warn("Failed to fetch providers for TV tmdbId {}, skipping. Error: {}", tmdbId, e.getMessage());
+                    return Mono.empty(); // 실패 시 빈 Mono 반환
                 });
     }
 }
