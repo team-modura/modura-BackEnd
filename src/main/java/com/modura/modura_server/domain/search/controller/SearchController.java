@@ -92,4 +92,13 @@ public class SearchController {
 
         return ApiResponse.onSuccess(response);
     }
+
+    @Operation(summary = "TMDB Series Seeding", description = "인기순으로 시리즈 500개 저장")
+    @PostMapping("/seeding/series")
+    public ApiResponse<Void> seedSeries() {
+
+        searchCommandService.seedSeries();
+
+        return ApiResponse.onSuccess(null);
+    }
 }
