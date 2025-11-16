@@ -1,6 +1,10 @@
 package com.modura.modura_server.domain.search.service;
 
+import com.modura.modura_server.domain.content.entity.Category;
 import com.modura.modura_server.domain.content.entity.Content;
+import com.modura.modura_server.domain.content.entity.ContentCategory;
+import com.modura.modura_server.domain.content.repository.CategoryRepository;
+import com.modura.modura_server.domain.content.repository.ContentCategoryRepository;
 import com.modura.modura_server.domain.content.repository.ContentRepository;
 import com.modura.modura_server.global.tmdb.client.TmdbApiClient;
 import com.modura.modura_server.global.tmdb.dto.TmdbMovieDetailResponseDTO;
@@ -8,6 +12,7 @@ import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
 import com.modura.modura_server.global.tmdb.dto.TmdbTVDetailResponseDTO;
 import com.modura.modura_server.global.tmdb.dto.TmdbTVResponseDTO;
 import com.modura.modura_server.global.tmdb.repository.TmdbBlacklistRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openkoreantext.processor.OpenKoreanTextProcessorJava;
@@ -22,10 +27,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import scala.collection.Seq;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -43,6 +45,10 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     private final RedissonClient redissonClient;
     private final TransactionTemplate transactionTemplate;
 
+    private final CategoryRepository categoryRepository;
+    private final ContentCategoryRepository contentCategoryRepository;
+    private Map<Long, Category> categoryMap;
+
     private static final String POPULAR_KEYWORD_KEY = "popular:keywords";
     private static final int MIN_KEYWORD_LENGTH = 2;
 
@@ -55,6 +61,27 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     private static final int PAGES_TO_FETCH = 25; // 25 페이지 * 20개 = 500개
     private static final long API_THROTTLE_MS = 100;
     private static final String TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500";
+
+    @PostConstruct
+    public void initCategoryMap() {
+        try {
+            this.categoryMap = categoryRepository.findAll().stream()
+                    .collect(Collectors.toMap(Category::getId, category -> category));
+        } catch (Exception e) {
+            log.error("Failed to initialize Category Map", e);
+            this.categoryMap = Collections.emptyMap();
+        }
+    }
+
+    private static class ContentWithCategories {
+        final Content content;
+        final List<Category> categories;
+
+        ContentWithCategories(Content content, List<Category> categories) {
+            this.content = content;
+            this.categories = categories;
+        }
+    }
 
     @Async
     @Override
@@ -136,8 +163,31 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 return;
             }
 
-            List<Content> newContentList = buildMovieList(moviesToProcess);
+            List<ContentWithCategories> processedItems = buildMovieList(moviesToProcess);
+            List<Content> newContentList = processedItems.stream()
+                    .map(item -> item.content)
+                    .collect(Collectors.toList());
+
             saveIfNotEmpty(newContentList, "movies");
+
+            // ContentCategory 저장
+            List<ContentCategory> newContentCategories = processedItems.stream()
+                    .flatMap(item -> {
+                        Content savedContent = item.content; // saveAll을 통해 ID가 할당됨
+                        return item.categories.stream()
+                                .map(category -> ContentCategory.builder()
+                                        .content(savedContent)
+                                        .category(category)
+                                        .build());
+                    })
+                    .collect(Collectors.toList());
+
+            if (!newContentCategories.isEmpty()) {
+                log.info("Saving {} new content-category links for movies.", newContentCategories.size());
+                transactionTemplate.executeWithoutResult(status -> {
+                    contentCategoryRepository.saveAll(newContentCategories);
+                });
+            }
         } catch (InterruptedException e) {
             // 락을 기다리는 도중 인터럽트 발생 시
             Thread.currentThread().interrupt();
@@ -323,15 +373,16 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         return blacklist;
     }
 
-    private List<Content> buildMovieList(List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess) {
+    private List<ContentWithCategories> buildMovieList(List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess) {
         log.info("Fetching details for {} new movies...", moviesToProcess.size());
         return moviesToProcess.stream()
                 .map(this::fetchDetailsAndBuildMovie)
-                .filter(Objects::nonNull)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(Collectors.toList());
     }
 
-    private Content fetchDetailsAndBuildMovie(TmdbMovieResponseDTO.MovieResultDTO listDto) {
+    private Optional<ContentWithCategories> fetchDetailsAndBuildMovie(TmdbMovieResponseDTO.MovieResultDTO listDto) {
         try {
             TmdbMovieDetailResponseDTO detailDto = tmdbApiClient.fetchMovieDetails(listDto.getId()).block();
             Thread.sleep(API_THROTTLE_MS);
@@ -341,7 +392,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 return null;
             }
 
-            return Content.builder()
+            Content content = Content.builder()
                     .titleKr(listDto.getTitle())
                     .titleEng(detailDto.getTitle())
                     .year(parseYearFromDate(listDto.getReleaseDate()))
@@ -351,6 +402,10 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                     .type(2)
                     .tmdbId(listDto.getId())
                     .build();
+
+            List<Category> categories = mapGenreIdsToCategories(listDto.getGenreIds());
+
+            return Optional.of(new ContentWithCategories(content, categories));
         } catch (Exception e) {
             log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
             return null;
@@ -388,6 +443,18 @@ public class SearchCommandServiceImpl implements SearchCommandService {
             log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
             return null;
         }
+    }
+
+    private List<Category> mapGenreIdsToCategories(List<Integer> genreIds) {
+
+        if (genreIds == null || genreIds.isEmpty() || this.categoryMap == null) {
+            return Collections.emptyList();
+        }
+
+        return genreIds.stream()
+                .map(genreId -> this.categoryMap.get(Long.valueOf(genreId)))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     private void saveIfNotEmpty(List<Content> contents, String contentType) {

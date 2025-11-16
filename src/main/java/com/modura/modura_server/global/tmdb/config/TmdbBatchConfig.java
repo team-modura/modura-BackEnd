@@ -1,12 +1,17 @@
 package com.modura.modura_server.global.tmdb.config;
 
+import com.modura.modura_server.domain.content.entity.Category;
 import com.modura.modura_server.domain.content.entity.Content;
+import com.modura.modura_server.domain.content.entity.ContentCategory;
+import com.modura.modura_server.domain.content.repository.CategoryRepository;
+import com.modura.modura_server.domain.content.repository.ContentCategoryRepository;
 import com.modura.modura_server.domain.content.repository.ContentRepository;
 import com.modura.modura_server.global.tmdb.client.TmdbApiClient;
 import com.modura.modura_server.global.tmdb.dto.TmdbMovieDetailResponseDTO;
 import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
 import com.modura.modura_server.global.tmdb.dto.TmdbTVDetailResponseDTO;
 import com.modura.modura_server.global.tmdb.dto.TmdbTVResponseDTO;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -37,12 +42,41 @@ public class TmdbBatchConfig {
 
     private final TmdbApiClient tmdbApiClient;
     private final ContentRepository contentRepository;
+    private final ContentCategoryRepository contentCategoryRepository;
+    private final CategoryRepository categoryRepository;
 
     private static final int CHUNK_SIZE = 20; // 한 번에 처리(Write)할 항목 수
     private static final int TOTAL_PAGES_TO_FETCH = 5; // 가져올 총 페이지 수
     private static final long API_THROTTLE_MS = 100; // API 호출 간 딜레이
     private static final String TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
+    private Map<Long, Category> categoryMap;
+
+    @PostConstruct
+    public void initCategoryMap() {
+
+        try {
+            this.categoryMap = categoryRepository.findAll().stream()
+                    .collect(Collectors.toMap(Category::getId, category -> category));
+        } catch (Exception e) {
+            log.error("Failed to initialize Category Map", e);
+            this.categoryMap = Collections.emptyMap();
+        }
+    }
+
+    private static class ContentWithCategories {
+
+        final Content content;
+        final List<Category> categories;
+
+        ContentWithCategories(Content content, List<Category> categories) {
+            this.content = content;
+            this.categories = categories;
+        }
+//
+//        Content getContent() { return content; }
+//        List<Category> getCategories() { return categories; }
+    }
 
     // 1. Job 정의
     @Bean
@@ -105,19 +139,41 @@ public class TmdbBatchConfig {
                     .collect(Collectors.toSet());
 
             // 3. [필터링 -> API 호출 -> 변환] 작업을 Stream으로 처리
-            List<Content> newContentList = chunk.getItems().stream()
+            List<ContentWithCategories> processedItems = chunk.getItems().stream()
                     .filter(listDto -> !existingTmdbIds.contains(listDto.getId()))
                     .map(this::fetchMovieDetailsAndBuildContent)
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .collect(Collectors.toList());
 
-            // 4. 새로운 영화가 있을 경우에만 DB에 일괄 저장
-            if (!newContentList.isEmpty()) {
-                log.info("Saving {} new movie items to DB.", newContentList.size());
-                contentRepository.saveAll(newContentList);
-            } else {
+            if (processedItems.isEmpty()) {
                 log.info("No new movie items to save in this chunk.");
+                return;
+            }
+
+            // Content 엔티티 일괄 저장
+            List<Content> newContentList = processedItems.stream()
+                    .map(item -> item.content)
+                    .collect(Collectors.toList());
+
+            log.info("Saving {} new movie items to DB.", newContentList.size());
+            contentRepository.saveAll(newContentList);
+
+            List<ContentCategory> newContentCategories = processedItems.stream()
+                    .flatMap(item -> {
+                        Content savedContent = item.content;
+                        return item.categories.stream()
+                                .map(category -> ContentCategory.builder()
+                                        .content(savedContent)
+                                        .category(category)
+                                        .build());
+                    })
+                    .collect(Collectors.toList());
+
+            // ContentCategory 일괄 저장
+            if (!newContentCategories.isEmpty()) {
+                log.info("Saving {} new content-category links for movies.", newContentCategories.size());
+                contentCategoryRepository.saveAll(newContentCategories);
             }
         };
     }
@@ -184,26 +240,47 @@ public class TmdbBatchConfig {
                     .collect(Collectors.toSet());
 
             // 3. [필터링 -> API 호출 -> 변환] 작업을 Stream으로 처리
-            List<Content> newContentList = chunk.getItems().stream()
+            List<ContentWithCategories> processedItems = chunk.getItems().stream()
                     .filter(listDto -> !existingTmdbIds.contains(listDto.getId()))
                     .map(this::fetchTVDetailsAndBuildContent)
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .collect(Collectors.toList());
-
-            // 4. 새로운 TV Series가 있을 경우에만 DB에 일괄 저장
-            if (!newContentList.isEmpty()) {
-                log.info("Saving {} new TV series items to DB.", newContentList.size());
-                contentRepository.saveAll(newContentList);
-            } else {
+;
+            if (processedItems.isEmpty()) {
                 log.info("No new TV series items to save in this chunk.");
+                return;
+            }
+
+            // Content 엔티티 일괄 저장
+            List<Content> newContentList = processedItems.stream()
+                    .map(item -> item.content)
+                    .collect(Collectors.toList());
+
+            log.info("Saving {} new TV series items to DB.", newContentList.size());
+            contentRepository.saveAll(newContentList);
+
+            List<ContentCategory> newContentCategories = processedItems.stream()
+                    .flatMap(item -> {
+                        Content savedContent = item.content;
+                        return item.categories.stream()
+                                .map(category -> ContentCategory.builder()
+                                        .content(savedContent)
+                                        .category(category)
+                                        .build());
+                    })
+                    .collect(Collectors.toList());
+
+            // ContentCategory 일괄 저장
+            if (!newContentCategories.isEmpty()) {
+                log.info("Saving {} new content-category links for TV series.", newContentCategories.size());
+                contentCategoryRepository.saveAll(newContentCategories);
             }
         };
     }
 
-    private Optional<Content> fetchMovieDetailsAndBuildContent(TmdbMovieResponseDTO.MovieResultDTO listDto) {
+    private Optional<ContentWithCategories> fetchMovieDetailsAndBuildContent(TmdbMovieResponseDTO.MovieResultDTO listDto) {
         try {
-            // 4-1. 상세 정보 API 호출
             TmdbMovieDetailResponseDTO detailDto = tmdbApiClient.fetchMovieDetails(listDto.getId()).block();
             Thread.sleep(API_THROTTLE_MS); // API Throttling
 
@@ -212,8 +289,7 @@ public class TmdbBatchConfig {
                 return Optional.empty();
             }
 
-            // 4-3. Content 엔티티 빌드
-            return Optional.of(Content.builder()
+            Content content = Content.builder()
                     .titleKr(listDto.getTitle())
                     .titleEng(detailDto.getTitle())
                     .year(parseYearFromDate(listDto.getReleaseDate()))
@@ -222,16 +298,19 @@ public class TmdbBatchConfig {
                     .runtime(detailDto.getRuntime())
                     .type(2)
                     .tmdbId(listDto.getId())
-                    .build());
+                    .build();
+
+            List<Category> categories = mapGenreIdsToCategories(listDto.getGenreIds());
+
+            return Optional.of(new ContentWithCategories(content, categories));
         } catch (Exception e) {
             log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
             return Optional.empty();
         }
     }
 
-    private Optional<Content> fetchTVDetailsAndBuildContent(TmdbTVResponseDTO.TVResultDTO listDto) {
+    private Optional<ContentWithCategories> fetchTVDetailsAndBuildContent(TmdbTVResponseDTO.TVResultDTO listDto) {
         try {
-            // 4-1. 상세 정보 API 호출
             TmdbTVDetailResponseDTO detailDto = tmdbApiClient.fetchTVDetails(listDto.getId()).block();
             Thread.sleep(API_THROTTLE_MS); // API Throttling
 
@@ -240,8 +319,7 @@ public class TmdbBatchConfig {
                 return Optional.empty();
             }
 
-            // 4-3. Content 엔티티 빌드
-            return Optional.of(Content.builder()
+            Content content = Content.builder()
                     .titleKr(listDto.getName())
                     .titleEng(detailDto.getName())
                     .year(parseYearFromDate(listDto.getFirstAirDate()))
@@ -249,11 +327,27 @@ public class TmdbBatchConfig {
                     .thumbnail(listDto.getPosterPath() != null ? TMDB_POSTER_BASE_URL + listDto.getPosterPath() : null)
                     .type(1)
                     .tmdbId(listDto.getId())
-                    .build());
+                    .build();
+
+            List<Category> categories = mapGenreIdsToCategories(listDto.getGenreIds());
+
+            return Optional.of(new ContentWithCategories(content, categories));
         } catch (Exception e) {
             log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private List<Category> mapGenreIdsToCategories(List<Integer> genreIds) {
+
+        if (genreIds == null || genreIds.isEmpty() || this.categoryMap == null) {
+            return Collections.emptyList();
+        }
+
+        return genreIds.stream()
+                .map(genreId -> this.categoryMap.get(Long.valueOf(genreId)))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     private Integer parseYearFromDate(String releaseDate) {
