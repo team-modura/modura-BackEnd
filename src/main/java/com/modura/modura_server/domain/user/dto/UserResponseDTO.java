@@ -1,5 +1,8 @@
 package com.modura.modura_server.domain.user.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -40,6 +43,11 @@ public class UserResponseDTO {
         String title;
         String name;
         String date;
+        Integer similarity;
+        Integer angle;
+        Integer clarity;
+        Integer color;
+        Integer palette;
     }
 
     @Builder

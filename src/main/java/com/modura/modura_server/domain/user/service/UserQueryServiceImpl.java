@@ -127,6 +127,11 @@ public class UserQueryServiceImpl implements UserQueryService {
                 .title(content.getTitleKr())
                 .name(place.getName())
                 .date(userStillcut.getCreatedAt().toLocalDate().toString())
+                .similarity(userStillcut.getSimilarity())
+                .angle(userStillcut.getAngle())
+                .clarity(userStillcut.getClarity())
+                .color(userStillcut.getColor())
+                .palette(userStillcut.getPalette())
                 .build();
     }
 
@@ -198,7 +203,12 @@ public class UserQueryServiceImpl implements UserQueryService {
                     List<String> s3Keys = imagesByReviewId.getOrDefault(review.getId(), Collections.emptyList());
                     List<String> imageUrls = s3Service.generateViewPresignedUrls(s3Keys);
 
-                    return UserConverter.toGetPlaceReviewDTO(review, imageUrls);
+                    String presignedUrl = null;
+                    if (StringUtils.hasText(review.getPlace().getThumbnail())) {
+                        presignedUrl = s3Service.generateViewPresignedUrl(review.getPlace().getThumbnail());
+                    }
+
+                    return UserConverter.toGetPlaceReviewDTO(review, imageUrls, presignedUrl);
                 })
                 .collect(Collectors.toList());
     }

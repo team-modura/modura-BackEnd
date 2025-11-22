@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/auth")
-@Tag(name = "Auth")
+@RequestMapping("/admin")
+@Tag(name = "Admin")
 @Validated
 public class AdminController {
 
