@@ -89,7 +89,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
                 .map(Place::getId)
                 .toList();
 
-        // '좋아요' 누른 컨텐츠 ID 목록을 한 번의 쿼리로 조회
+        // '좋아요' 누른 촬영지 ID 목록을 한 번의 쿼리로 조회
         Set<Long> likedPlaceIds = placeLikesRepository.findIdsByUserIdAndPlaceIds(userId, placeIds);
 
         List<SearchResponseDTO.SearchPlaceDTO> placeDTOList = combinedPlaces.stream()
