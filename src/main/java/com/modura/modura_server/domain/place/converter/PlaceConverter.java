@@ -68,6 +68,7 @@ public class PlaceConverter {
 
     public static PlaceResponseDTO.GetPlaceDTO toGetPlaceDTO(Place place,
                                                              boolean isLiked,
+                                                             String thumbnailUrl,
                                                              Double reviewAvg,
                                                              Integer reviewCount,
                                                              List<String> contentTitles) {
@@ -76,7 +77,7 @@ public class PlaceConverter {
                 .id(place.getId())
                 .name(place.getName())
                 .isLiked(isLiked)
-                .thumbnail(place.getThumbnail())
+                .thumbnail(thumbnailUrl)
                 .rating(reviewAvg)
                 .reviewCount(reviewCount)
                 .latitude(place.getLatitude())

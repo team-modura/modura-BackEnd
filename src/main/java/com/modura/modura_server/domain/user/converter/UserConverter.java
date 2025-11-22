@@ -3,7 +3,6 @@ package com.modura.modura_server.domain.user.converter;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.entity.ContentReview;
 import com.modura.modura_server.domain.place.dto.PlaceResponseDTO;
-import com.modura.modura_server.domain.place.entity.Place;
 import com.modura.modura_server.domain.place.entity.PlaceReview;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 import com.modura.modura_server.domain.user.dto.UserResponseDTO;
@@ -27,22 +26,6 @@ public class UserConverter {
 
         return SearchResponseDTO.SearchContentListDTO.builder()
                 .contentList(contentDTOList)
-                .build();
-    }
-
-    public static SearchResponseDTO.SearchPlaceListDTO toGetLikedPlaceListDTO(List<Place> placeList){
-
-        List<SearchResponseDTO.SearchPlaceDTO> placeDTOList = placeList.stream()
-                .map(place -> SearchResponseDTO.SearchPlaceDTO.builder()
-                        .id(place.getId())
-                        .name(place.getName())
-                        .isLiked(true)
-                        .thumbnail(place.getThumbnail())
-                        .build())
-                .collect(Collectors.toList());
-
-        return SearchResponseDTO.SearchPlaceListDTO.builder()
-                .placeList(placeDTOList)
                 .build();
     }
 

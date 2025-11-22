@@ -23,13 +23,13 @@ public class SearchConverter {
                 .build();
     }
 
-    public static SearchResponseDTO.SearchPlaceDTO toSearchPlaceDTO(Place place, boolean isLiked) {
+    public static SearchResponseDTO.SearchPlaceDTO toSearchPlaceDTO(Place place, boolean isLiked, String thumbnailUrl) {
 
         return SearchResponseDTO.SearchPlaceDTO.builder()
                 .id(place.getId())
                 .name(place.getName())
                 .isLiked(isLiked)
-                .thumbnail(place.getThumbnail())
+                .thumbnail(thumbnailUrl)
                 .build();
     }
 
@@ -47,17 +47,10 @@ public class SearchConverter {
                 .build();
     }
 
-    public static SearchResponseDTO.SearchPlaceListDTO toSearchPlaceListDTO(List<Place> placeList, Set<Long> likedPlaceIds){
-
-        List<SearchResponseDTO.SearchPlaceDTO> placeDTOList = placeList.stream()
-                .map(place -> {
-                    boolean isLiked = likedPlaceIds.contains(place.getId());
-                    return toSearchPlaceDTO(place, isLiked);
-                })
-                .collect(Collectors.toList());
+    public static SearchResponseDTO.SearchPlaceListDTO toSearchPlaceListDTO(List<SearchResponseDTO.SearchPlaceDTO> placeList){
 
         return SearchResponseDTO.SearchPlaceListDTO.builder()
-                .placeList(placeDTOList)
+                .placeList(placeList)
                 .build();
     }
 

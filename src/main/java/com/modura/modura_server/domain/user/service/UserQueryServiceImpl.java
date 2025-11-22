@@ -10,6 +10,7 @@ import com.modura.modura_server.domain.place.entity.ReviewImage;
 import com.modura.modura_server.domain.place.repository.PlaceRepository;
 import com.modura.modura_server.domain.place.repository.PlaceReviewRepository;
 import com.modura.modura_server.domain.place.repository.ReviewImageRepository;
+import com.modura.modura_server.domain.search.converter.SearchConverter;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 import com.modura.modura_server.domain.user.converter.UserConverter;
 import com.modura.modura_server.domain.user.dto.UserResponseDTO;
@@ -22,6 +23,7 @@ import com.modura.modura_server.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -68,7 +70,19 @@ public class UserQueryServiceImpl implements UserQueryService {
 
         List<Place> likedPlaces = placeRepository.findLikedPlacesByUser(userId);
 
-        return UserConverter.toGetLikedPlaceListDTO(likedPlaces);
+        List<SearchResponseDTO.SearchPlaceDTO> placeDTOList = likedPlaces.stream()
+                .map(place -> {
+                    // S3 Presigned URL 생성
+                    String presignedUrl = null;
+                    if (StringUtils.hasText(place.getThumbnail())) {
+                        presignedUrl = s3Service.generateViewPresignedUrl(place.getThumbnail());
+                    }
+
+                    return SearchConverter.toSearchPlaceDTO(place, true, presignedUrl);
+                })
+                .collect(Collectors.toList());
+
+        return SearchConverter.toSearchPlaceListDTO(placeDTOList);
     }
 
     @Override
