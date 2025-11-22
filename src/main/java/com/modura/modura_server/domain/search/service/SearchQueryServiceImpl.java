@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -97,7 +98,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
 
                     // S3 Presigned URL 생성
                     String presignedUrl = null;
-                    if (place.getThumbnail() != null && !place.getThumbnail().isBlank()) {
+                    if (StringUtils.hasText(place.getThumbnail())) {
                         presignedUrl = s3Service.generateViewPresignedUrl(place.getThumbnail());
                     }
 
@@ -153,7 +154,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
 
                     // S3 Presigned URL 생성
                     String presignedUrl = null;
-                    if (place.getThumbnail() != null && !place.getThumbnail().isBlank()) {
+                    if (StringUtils.hasText(place.getThumbnail())) {
                         presignedUrl = s3Service.generateViewPresignedUrl(place.getThumbnail());
                     }
 

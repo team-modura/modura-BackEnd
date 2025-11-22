@@ -23,6 +23,7 @@ import com.modura.modura_server.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -73,7 +74,7 @@ public class UserQueryServiceImpl implements UserQueryService {
                 .map(place -> {
                     // S3 Presigned URL 생성
                     String presignedUrl = null;
-                    if (place.getThumbnail() != null && !place.getThumbnail().isBlank()) {
+                    if (StringUtils.hasText(place.getThumbnail())) {
                         presignedUrl = s3Service.generateViewPresignedUrl(place.getThumbnail());
                     }
 
