@@ -112,81 +112,23 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
     @Override
     @Transactional(readOnly = true)
     public PlaceResponseDTO.GetPlaceDetailDTO getPlaceDetail(Long placeId, Long userId) {
+
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.PLACE_NOT_FOUND));
 
-        Boolean isLiked = placeLikesRepository.existsByUserIdAndPlaceId(userId, placeId);
+        String placeThumbnail = generatePlaceThumbnail(place.getThumbnail());
 
+        Boolean isLiked = placeLikesRepository.existsByUserIdAndPlaceId(userId, placeId);
         Double reviewAvg = placeReviewRepository.findAverageRatingByPlaceId(placeId);
         Integer reviewCount = placeReviewRepository.countByPlace(placeId);
 
-        List<PlaceReview> reviews = Optional.ofNullable(
-                placeReviewRepository.findByPlace(placeId)
-        ).orElse(List.of());
-
-        List<Stillcut> stillcuts = Optional.ofNullable(
-                stillcutRepository.findByPlaceId(place.getId())
-        ).orElse(List.of());
-
-        List<Long> contentIds = stillcuts.stream()
-                .map(stillcut -> stillcut.getContent().getId())
-                .distinct()
-                .collect(Collectors.toList());
-
-        Set<Long> likedContentIds = contentLikesRepository
-                .findByUserIdAndContentIdIn(userId, contentIds).stream()
-                .map(contentLikes -> contentLikes.getContent().getId())
-                .collect(Collectors.toSet());
-
-        List<PlaceResponseDTO.ContentItemDTO> contentList = stillcuts.stream()
-                .map(stillcut -> {
-                    Long contentId = stillcut.getContent().getId();
-                    Boolean isContentLiked = likedContentIds.contains(contentId);
-                    return PlaceResponseDTO.ContentItemDTO.builder()
-                            .contentId(contentId)
-                            .title(stillcut.getContent().getTitleKr())
-                            .thumbnail(stillcut.getContent().getThumbnail())
-                            .isLiked(isContentLiked)
-                            .build();
-                })
-                .collect(Collectors.toList());
-
-        List<Long> reviewIds = reviews.stream()
-                .map(PlaceReview::getId)
-                .collect(Collectors.toList());
-
-        List<ReviewImage> allImages = reviewImageRepository.findByPlaceReviewIdIn(reviewIds);
-        Map<Long, List<String>> imagesByReviewId = allImages.stream()
-                .collect(Collectors.groupingBy(
-                        img -> img.getPlaceReview().getId(),
-                        Collectors.mapping(ReviewImage::getImageUrl, Collectors.toList())
-                ));
-
-        List<PlaceResponseDTO.ReviewItemDTO> reviewDTOs = reviews.stream()
-                .map(review -> {
-                    List<String> s3Keys = imagesByReviewId.getOrDefault(
-                            review.getId(),
-                            Collections.emptyList()
-                    );
-
-                    List<String> imageUrls = s3Service.generateViewPresignedUrls(s3Keys);
-
-                    String username = resolveUsername(review.getUser());
-
-                    return PlaceResponseDTO.ReviewItemDTO.builder()
-                            .placeReviewId(review.getId())
-                            .username(username)
-                            .rating(review.getRating())
-                            .comment(review.getBody())
-                            .imageUrl(imageUrls)
-                            .createdAt(review.getCreatedAt().toString())
-                            .build();
-                })
-                .collect(Collectors.toList());
+        List<PlaceResponseDTO.ReviewItemDTO> reviewDTOs = getPlaceReviews(placeId);
+        List<PlaceResponseDTO.ContentItemDTO> contentList = getRelatedContents(placeId, userId);
 
         return PlaceConverter.toGetPlaceDetailDTO(
                 place,
                 isLiked,
+                placeThumbnail,
                 reviewAvg,
                 reviewCount,
                 contentList,
@@ -248,6 +190,92 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 }).toList();
 
         return PlaceConverter.toGetPlaceListDTO(placeDTOList);
+    }
+
+    private String generatePlaceThumbnail(String thumbnailKey) {
+
+        if (StringUtils.hasText(thumbnailKey)) {
+            return s3Service.generateViewPresignedUrl(thumbnailKey);
+        }
+        return null;
+    }
+
+    private List<PlaceResponseDTO.ReviewItemDTO> getPlaceReviews(Long placeId) {
+
+        List<PlaceReview> reviews = placeReviewRepository.findByPlace(placeId);
+
+        if (reviews.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 리뷰 이미지 일괄 조회 (N+1 문제 방지)
+        Map<Long, List<String>> imagesByReviewId = getReviewImagesMap(reviews);
+
+        return reviews.stream()
+                .map(review -> {
+                    List<String> s3Keys = imagesByReviewId.getOrDefault(review.getId(), Collections.emptyList());
+                    List<String> imageUrls = s3Service.generateViewPresignedUrls(s3Keys);
+                    String username = resolveUsername(review.getUser());
+
+                    return PlaceResponseDTO.ReviewItemDTO.builder()
+                            .placeReviewId(review.getId())
+                            .username(username)
+                            .rating(review.getRating())
+                            .comment(review.getBody())
+                            .imageUrl(imageUrls)
+                            .createdAt(review.getCreatedAt().toString())
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    private Map<Long, List<String>> getReviewImagesMap(List<PlaceReview> reviews) {
+
+        List<Long> reviewIds = reviews.stream()
+                .map(PlaceReview::getId)
+                .toList();
+
+        List<ReviewImage> allImages = reviewImageRepository.findByPlaceReviewIdIn(reviewIds);
+
+        return allImages.stream()
+                .collect(Collectors.groupingBy(
+                        img -> img.getPlaceReview().getId(),
+                        Collectors.mapping(ReviewImage::getImageUrl, Collectors.toList())
+                ));
+    }
+
+    private List<PlaceResponseDTO.ContentItemDTO> getRelatedContents(Long placeId, Long userId) {
+
+        List<Stillcut> stillcuts = stillcutRepository.findByPlaceId(placeId);
+
+        if (stillcuts.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 중복 없는 Content ID 추출
+        List<Long> contentIds = stillcuts.stream()
+                .map(stillcut -> stillcut.getContent().getId())
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 유저가 찜한 컨텐츠 ID 조회 (Batch 조회)
+        Set<Long> likedContentIds = contentLikesRepository
+                .findByUserIdAndContentIdIn(userId, contentIds).stream()
+                .map(contentLikes -> contentLikes.getContent().getId())
+                .collect(Collectors.toSet());
+
+        // DTO 매핑
+        return stillcuts.stream()
+                .map(stillcut -> {
+                    Long contentId = stillcut.getContent().getId();
+                    return PlaceResponseDTO.ContentItemDTO.builder()
+                            .contentId(contentId)
+                            .title(stillcut.getContent().getTitleKr())
+                            .thumbnail(stillcut.getContent().getThumbnail())
+                            .isLiked(likedContentIds.contains(contentId))
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     private List<Place> findPlaces(String query) {

@@ -39,6 +39,7 @@ public class PlaceConverter {
     public static PlaceResponseDTO.GetPlaceDetailDTO toGetPlaceDetailDTO(
             Place place,
             Boolean isLiked,
+            String placeThumbnail,
             Double reviewAvg,
             Integer reviewCount,
             List<PlaceResponseDTO.ContentItemDTO> contentList,
@@ -52,7 +53,7 @@ public class PlaceConverter {
                 .latitude(place.getLatitude())
                 .longitude(place.getLongitude())
                 .isLiked(isLiked)
-                .placeImageUrl(place.getThumbnail())
+                .placeImageUrl(placeThumbnail)
                 .reviewCount(reviewCount)
                 .contentList(contentList)
                 .reviews(reviews)
