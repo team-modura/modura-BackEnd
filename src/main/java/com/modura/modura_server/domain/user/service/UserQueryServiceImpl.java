@@ -127,6 +127,11 @@ public class UserQueryServiceImpl implements UserQueryService {
                 .title(content.getTitleKr())
                 .name(place.getName())
                 .date(userStillcut.getCreatedAt().toLocalDate().toString())
+                .similarity(userStillcut.getSimilarity())
+                .angle(userStillcut.getAngle())
+                .clarity(userStillcut.getClarity())
+                .color(userStillcut.getColor())
+                .palette(userStillcut.getPalette())
                 .build();
     }
 
