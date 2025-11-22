@@ -14,6 +14,7 @@ import com.modura.modura_server.domain.search.converter.SearchConverter;
 import com.modura.modura_server.domain.search.dto.SearchResponseDTO;
 import com.modura.modura_server.domain.user.entity.Stillcut;
 import com.modura.modura_server.domain.user.repository.StillcutRepository;
+import com.modura.modura_server.global.s3.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -36,8 +37,9 @@ public class SearchQueryServiceImpl implements SearchQueryService {
     private final PlaceReviewRepository placeReviewRepository;
     private final PopularContentService popularContentService;
     private final PlatformRepository platformRepository;
-
     private final SearchCommandService searchCommandService;
+    private final S3Service s3Service;
+
     private final RedisTemplate<String, String> redisTemplate;
 
     private static final String POPULAR_KEYWORD_KEY = "popular:keywords";
@@ -60,7 +62,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
                 .map(Content::getId)
                 .toList();
 
-        // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
+        // '좋아요' 누른 컨텐츠 ID 목록을 한 번의 쿼리로 조회
         Set<Long> likedContentIds = contentLikesRepository.findIdsByUserIdAndContentIds(userId, contentIds);
 
         return SearchConverter.toSearchContentListDTO(contents, likedContentIds);
@@ -86,10 +88,24 @@ public class SearchQueryServiceImpl implements SearchQueryService {
                 .map(Place::getId)
                 .toList();
 
-        // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
+        // '좋아요' 누른 컨텐츠 ID 목록을 한 번의 쿼리로 조회
         Set<Long> likedPlaceIds = placeLikesRepository.findIdsByUserIdAndPlaceIds(userId, placeIds);
 
-        return SearchConverter.toSearchPlaceListDTO(combinedPlaces, likedPlaceIds);
+        List<SearchResponseDTO.SearchPlaceDTO> placeDTOList = combinedPlaces.stream()
+                .map(place -> {
+                    boolean isLiked = likedPlaceIds.contains(place.getId());
+
+                    // S3 Presigned URL 생성
+                    String presignedUrl = null;
+                    if (place.getThumbnail() != null && !place.getThumbnail().isBlank()) {
+                        presignedUrl = s3Service.generateViewPresignedUrl(place.getThumbnail());
+                    }
+
+                    return SearchConverter.toSearchPlaceDTO(place, isLiked, presignedUrl);
+                })
+                .collect(Collectors.toList());
+
+        return SearchConverter.toSearchPlaceListDTO(placeDTOList);
     }
 
     @Override
@@ -128,9 +144,24 @@ public class SearchQueryServiceImpl implements SearchQueryService {
                 .filter(Objects::nonNull)
                 .toList();
 
+        // '좋아요' 누른 촬영지 ID 목록을 한 번의 쿼리로 조회
         Set<Long> likedPlaceIds = placeLikesRepository.findIdsByUserIdAndPlaceIds(userId, topPlaceIds);
 
-        return SearchConverter.toSearchPlaceListDTO(orderedPlaces, likedPlaceIds);
+        List<SearchResponseDTO.SearchPlaceDTO> placeDTOList = orderedPlaces.stream()
+                .map(place -> {
+                    boolean isLiked = likedPlaceIds.contains(place.getId());
+
+                    // S3 Presigned URL 생성
+                    String presignedUrl = null;
+                    if (place.getThumbnail() != null && !place.getThumbnail().isBlank()) {
+                        presignedUrl = s3Service.generateViewPresignedUrl(place.getThumbnail());
+                    }
+
+                    return SearchConverter.toSearchPlaceDTO(place, isLiked, presignedUrl);
+                })
+                .collect(Collectors.toList());
+
+        return SearchConverter.toSearchPlaceListDTO(placeDTOList);
     }
 
     @Override
@@ -149,7 +180,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
                 .map(PopularContentCacheDTO::getId)
                 .collect(Collectors.toList());
 
-        // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
+        // '좋아요' 누른 컨텐츠 ID 목록을 한 번의 쿼리로 조회
         Set<Long> likedContentIds = contentLikesRepository.findIdsByUserIdAndContentIds(userId, contentIds);
 
         Map<Long, List<String>> platformsByContentId = platformRepository.findByContent_IdIn(contentIds)
@@ -177,7 +208,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
                 .map(PopularContentCacheDTO::getId)
                 .collect(Collectors.toList());
 
-        // '좋아요' 누른 콘텐츠 ID 목록을 한 번의 쿼리로 조회
+        // '좋아요' 누른 컨텐츠 ID 목록을 한 번의 쿼리로 조회
         Set<Long> likedContentIds = contentLikesRepository.findIdsByUserIdAndContentIds(userId, contentIds);
 
         Map<Long, List<String>> platformsByContentId = platformRepository.findByContent_IdIn(contentIds)
