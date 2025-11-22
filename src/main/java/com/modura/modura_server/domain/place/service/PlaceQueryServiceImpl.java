@@ -220,25 +220,32 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 .stream()
                 .collect(Collectors.groupingBy(stillcut -> stillcut.getPlace().getId()));
 
-        List<PlaceResponseDTO.GetPlaceDTO> placeDTOList = places.stream().map(place -> {
-            boolean isLiked = likedPlaceIds.contains(place.getId());
+        List<PlaceResponseDTO.GetPlaceDTO> placeDTOList = places.stream()
+                .map(place -> {
+                    boolean isLiked = likedPlaceIds.contains(place.getId());
 
-            List<PlaceReview> placeReviews = reviewsByPlaceId.getOrDefault(place.getId(), Collections.emptyList());
-            int reviewCount = placeReviews.size();
-            double reviewAvg = placeReviews.stream()
-                    .mapToDouble(PlaceReview::getRating)
-                    .average()
-                    .orElse(0.0);
-            reviewAvg = Math.round(reviewAvg * 10.0) / 10.0; // 소수점 첫째 자리
+                    List<PlaceReview> placeReviews = reviewsByPlaceId.getOrDefault(place.getId(), Collections.emptyList());
+                    int reviewCount = placeReviews.size();
+                    double reviewAvg = placeReviews.stream()
+                            .mapToDouble(PlaceReview::getRating)
+                            .average()
+                            .orElse(0.0);
+                    reviewAvg = Math.round(reviewAvg * 10.0) / 10.0; // 소수점 첫째 자리
 
-            List<String> contentTitles = stillcutsByPlaceId.getOrDefault(place.getId(), Collections.emptyList())
-                    .stream()
-                    .map(stillcut -> stillcut.getContent().getTitleKr())
-                    .distinct()
-                    .toList();
+                    List<String> contentTitles = stillcutsByPlaceId.getOrDefault(place.getId(), Collections.emptyList())
+                            .stream()
+                            .map(stillcut -> stillcut.getContent().getTitleKr())
+                            .distinct()
+                            .toList();
 
-            return PlaceConverter.toGetPlaceDTO(place, isLiked, reviewAvg, reviewCount, contentTitles);
-        }).toList();
+                    // S3 Presigned URL 생성
+                    String presignedUrl = null;
+                    if (StringUtils.hasText(place.getThumbnail())) {
+                        presignedUrl = s3Service.generateViewPresignedUrl(place.getThumbnail());
+                    }
+
+                    return PlaceConverter.toGetPlaceDTO(place, isLiked, presignedUrl, reviewAvg, reviewCount, contentTitles);
+                }).toList();
 
         return PlaceConverter.toGetPlaceListDTO(placeDTOList);
     }
