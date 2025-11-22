@@ -116,7 +116,7 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.PLACE_NOT_FOUND));
 
-        String placeThumbnail = generateThumbnailUrl(place.getThumbnail());
+        String placeThumbnail = s3Service.generateThumbnailUrl(place.getThumbnail());
 
         Boolean isLiked = placeLikesRepository.existsByUserIdAndPlaceId(userId, placeId);
         Double reviewAvg = placeReviewRepository.findAverageRatingByPlaceId(placeId);
@@ -190,14 +190,6 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
                 }).toList();
 
         return PlaceConverter.toGetPlaceListDTO(placeDTOList);
-    }
-
-    private String generateThumbnailUrl(String s3Key) {
-
-        if (StringUtils.hasText(s3Key)) {
-            return s3Service.generateViewPresignedUrl(s3Key);
-        }
-        return null;
     }
 
     private List<PlaceResponseDTO.ReviewItemDTO> getPlaceReviews(Long placeId) {

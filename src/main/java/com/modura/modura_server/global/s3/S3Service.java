@@ -3,6 +3,7 @@ package com.modura.modura_server.global.s3;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -131,5 +132,13 @@ public class S3Service {
         } catch (Exception e) {
             throw new IllegalArgumentException("S3 URL에서 Key를 추출하는 중 오류가 발생했습니다.", e);
         }
+    }
+
+    public String generateThumbnailUrl(String s3Key) {
+
+        if (StringUtils.hasText(s3Key)) {
+            return generateViewPresignedUrl(s3Key);
+        }
+        return null;
     }
 }

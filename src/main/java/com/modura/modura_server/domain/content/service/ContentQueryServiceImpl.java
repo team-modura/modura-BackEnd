@@ -70,9 +70,8 @@ public class ContentQueryServiceImpl implements ContentQueryService {
         Content content = contentRepository.findById(contentId)
                 .orElseThrow(() -> new BusinessException(ErrorStatus.CONTENT_NOT_FOUND));
 
-        List<ContentReview> reviews = Optional.ofNullable(
-                contentReviewRepository.findByContent(content)
-        ).orElse(List.of());
+        List<ContentReview> reviews = getReviewsByContent(content);
+
         return ContentConverter.toContentReviewListDTO(
                 reviews
         );
@@ -125,14 +124,12 @@ public class ContentQueryServiceImpl implements ContentQueryService {
 
     private List<ContentReview> getReviewsByContent(Content content) {
 
-        return Optional.ofNullable(contentReviewRepository.findByContent(content))
-                .orElse(Collections.emptyList());
+        return contentReviewRepository.findByContent(content);
     }
 
     private List<String> getCategoryNames(Content content) {
 
-        return Optional.ofNullable(contentCategoryRepository.findByContent(content))
-                .orElse(Collections.emptyList())
+        return contentCategoryRepository.findByContent(content)
                 .stream()
                 .map(cc -> cc.getCategory().getName())
                 .collect(Collectors.toList());
@@ -140,8 +137,7 @@ public class ContentQueryServiceImpl implements ContentQueryService {
 
     private List<String> getPlatformNames(Content content) {
 
-        return Optional.ofNullable(platformRepository.findByContent(content))
-                .orElse(Collections.emptyList())
+        return platformRepository.findByContent(content)
                 .stream()
                 .map(Platform::getName)
                 .collect(Collectors.toList());
@@ -179,7 +175,7 @@ public class ContentQueryServiceImpl implements ContentQueryService {
                     Place place = stillcut.getPlace();
                     Boolean isPlaceLiked = likedPlaceIds.contains(place.getId());
 
-                    String stillcutThumbnail = generateThumbnailUrl(stillcut.getImageUrl());
+                    String stillcutThumbnail = s3Service.generateThumbnailUrl(stillcut.getImageUrl());
 
                     return ContentResponseDTO.StillCutPlaceItemDTO.builder()
                             .id(place.getId())
@@ -189,13 +185,5 @@ public class ContentQueryServiceImpl implements ContentQueryService {
                             .build();
                 })
                 .collect(Collectors.toList());
-    }
-
-    private String generateThumbnailUrl(String s3Key) {
-
-        if (StringUtils.hasText(s3Key)) {
-            return s3Service.generateViewPresignedUrl(s3Key);
-        }
-        return null;
     }
 }
