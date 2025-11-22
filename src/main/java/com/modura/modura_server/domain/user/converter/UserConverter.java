@@ -70,7 +70,7 @@ public class UserConverter {
                 .build();
     }
 
-    public static UserResponseDTO.GetPlaceReviewDTO toGetPlaceReviewDTO(PlaceReview review, List<String> imageUrlList) {
+    public static UserResponseDTO.GetPlaceReviewDTO toGetPlaceReviewDTO(PlaceReview review, List<String> imageUrlList, String thumbnailUrl) {
 
         return UserResponseDTO.GetPlaceReviewDTO.builder()
                 .id(review.getId())
@@ -81,7 +81,7 @@ public class UserConverter {
                 .comment(review.getBody())
                 .imageUrl(imageUrlList)
                 .createdAt(review.getCreatedAt().toString())
-                .thumbnail(review.getPlace().getThumbnail())
+                .thumbnail(thumbnailUrl)
                 .build();
     }
 
