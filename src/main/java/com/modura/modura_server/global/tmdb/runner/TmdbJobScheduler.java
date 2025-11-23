@@ -37,10 +37,7 @@ public class TmdbJobScheduler {
         this.redissonClient = redissonClient;
     }
 
-    /**
-     * fixedDelay = 3600000: 직전 작업이 '종료'된 후 1시간 뒤 실행
-     */
-    @Scheduled(fixedDelay = 3600000) // 1시간
+    @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
     public void runJobPeriodically() {
 
         // 1. 영화 작업 실행
