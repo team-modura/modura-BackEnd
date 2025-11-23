@@ -67,10 +67,10 @@ public class PopularContentService {
 
     private List<Integer> fetchPopularMovieTmdbIdsFromAPI() {
 
-        List<Integer> allTmdbIds = new ArrayList<>();
+        List<TmdbMovieResponseDTO.MovieResultDTO> allMovies = new ArrayList<>();
 
         for (int page = 1; page <= MAX_PAGES_TO_FETCH; page++) {
-            if (allTmdbIds.size() >= TARGET_COUNT * FETCH_BUFFER_MULTIPLIER) {
+            if (allMovies.size() >= TARGET_COUNT * FETCH_BUFFER_MULTIPLIER) {
                 break;
             }
             try {
@@ -78,17 +78,22 @@ public class PopularContentService {
                         .block(Duration.ofSeconds(10));
 
                 if (response != null && response.getResults() != null) {
-                    allTmdbIds.addAll(
-                            response.getResults().stream()
-                                    .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
-                                    .collect(Collectors.toList())
-                    );
+                    allMovies.addAll(response.getResults());
                 }
             } catch (Exception e) {
                 log.warn("Failed to fetch popular movies page {}. Skipping. Error: {}", page, e.getMessage());
             }
         }
-        return allTmdbIds;
+
+        return allMovies.stream()
+                .collect(Collectors.toMap(
+                        TmdbMovieResponseDTO.MovieResultDTO::getId,
+                        dto -> dto,
+                        (existing, replacement) -> existing
+                ))
+                .values().stream()
+                .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
+                .collect(Collectors.toList());
     }
 
     public List<PopularContentCacheDTO> getPopularTVs() {
@@ -118,10 +123,10 @@ public class PopularContentService {
 
     private List<Integer> fetchPopularTVTmdbIdsFromAPI() {
 
-        List<Integer> allTmdbIds = new ArrayList<>();
+        List<TmdbTVResponseDTO.TVResultDTO> allTVs = new ArrayList<>();
 
         for (int page = 1; page <= MAX_PAGES_TO_FETCH; page++) {
-            if (allTmdbIds.size() >= TARGET_COUNT * FETCH_BUFFER_MULTIPLIER) {
+            if (allTVs.size() >= TARGET_COUNT * FETCH_BUFFER_MULTIPLIER) {
                 break;
             }
             try {
@@ -129,17 +134,22 @@ public class PopularContentService {
                         .block(Duration.ofSeconds(10));
 
                 if (response != null && response.getResults() != null) {
-                    allTmdbIds.addAll(
-                            response.getResults().stream()
-                                    .map(TmdbTVResponseDTO.TVResultDTO::getId)
-                                    .collect(Collectors.toList())
-                    );
+                    allTVs.addAll(response.getResults());
                 }
             } catch (Exception e) {
                 log.warn("Failed to fetch popular TVs page {}. Skipping. Error: {}", page, e.getMessage());
             }
         }
-        return allTmdbIds;
+
+        return allTVs.stream()
+                .collect(Collectors.toMap(
+                        TmdbTVResponseDTO.TVResultDTO::getId,
+                        dto -> dto,
+                        (existing, replacement) -> existing
+                ))
+                .values().stream()
+                .map(TmdbTVResponseDTO.TVResultDTO::getId)
+                .collect(Collectors.toList());
     }
 
     private List<PopularContentCacheDTO> getFromCache(String cacheKey) {

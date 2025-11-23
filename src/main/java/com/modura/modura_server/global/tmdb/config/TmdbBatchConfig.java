@@ -48,7 +48,7 @@ public class TmdbBatchConfig {
     private final PlatformRepository platformRepository;
 
     private static final int CHUNK_SIZE = 20; // 한 번에 처리(Write)할 항목 수
-    private static final int TOTAL_PAGES_TO_FETCH = 5; // 가져올 총 페이지 수
+    private static final int TOTAL_PAGES_TO_FETCH = 2; // 가져올 총 페이지 수
     private static final long API_THROTTLE_MS = 100; // API 호출 간 딜레이
     private static final String TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
@@ -79,17 +79,6 @@ public class TmdbBatchConfig {
         }
     }
 
-    private static class ContentWithCategories {
-
-        final Content content;
-        final List<Category> categories;
-
-        ContentWithCategories(Content content, List<Category> categories) {
-            this.content = content;
-            this.categories = categories;
-        }
-    }
-
     // 1. Job 정의
     @Bean
     public Job tmdbMovieSeedingJob() {
@@ -115,23 +104,35 @@ public class TmdbBatchConfig {
     @StepScope
     public ItemReader<TmdbMovieResponseDTO.MovieResultDTO> tmdbMovieItemReader() {
 
-        Queue<TmdbMovieResponseDTO.MovieResultDTO> movieQueue = new LinkedList<>();
+        Queue<TmdbMovieResponseDTO.MovieResultDTO> allMovies = new LinkedList<>();
 
         for (int page = 1; page <= TOTAL_PAGES_TO_FETCH; page++) {
             try {
                 log.info("Fetching TMDB newest movies page: {}", page);
                 TmdbMovieResponseDTO response = tmdbApiClient.fetchNewestMovies(page).block();
                 if (response != null && response.getResults() != null) {
-                    movieQueue.addAll(response.getResults());
+                    allMovies.addAll(response.getResults());
                 }
                 Thread.sleep(API_THROTTLE_MS);
             } catch (Exception e) {
                 log.warn("Failed to fetch newest movies page {} during reader initialization", page, e);
             }
         }
-        log.info("Total {} movie items to process.", movieQueue.size());
 
-        return new IteratorItemReader<>(movieQueue);
+        // API 응답 목록에서 ID 기준으로 중복 제거
+        List<TmdbMovieResponseDTO.MovieResultDTO> uniqueMovies = new ArrayList<>(
+                allMovies.stream()
+                        .collect(Collectors.toMap(
+                                TmdbMovieResponseDTO.MovieResultDTO::getId,
+                                dto -> dto,
+                                (existing, replacement) -> existing
+                        ))
+                        .values()
+        );
+
+        log.info("Total {} movie items to process.", uniqueMovies.size());
+
+        return new IteratorItemReader<>(uniqueMovies);
     }
 
     // 4. ItemProcessor 정의
@@ -281,23 +282,35 @@ public class TmdbBatchConfig {
     @StepScope
     public ItemReader<TmdbTVResponseDTO.TVResultDTO> tmdbTVItemReader() {
 
-        Queue<TmdbTVResponseDTO.TVResultDTO> tvQueue = new LinkedList<>();
+        Queue<TmdbTVResponseDTO.TVResultDTO> allTVs = new LinkedList<>();
         for (int page = 1; page <= TOTAL_PAGES_TO_FETCH; page++) {
 
             try {
                 log.info("Fetching TMDB newest TV series page: {}", page);
                 TmdbTVResponseDTO response = tmdbApiClient.fetchNewestTVs(page).block();
                 if (response != null && response.getResults() != null) {
-                    tvQueue.addAll(response.getResults());
+                    allTVs.addAll(response.getResults());
                 }
                 Thread.sleep(API_THROTTLE_MS);
             } catch (Exception e) {
                 log.warn("Failed to fetch newest TV series page {} during reader initialization", page, e);
             }
         }
-        log.info("Total {} TV series items to process.", tvQueue.size());
 
-        return new IteratorItemReader<>(tvQueue);
+        // API 응답 목록에서 ID 기준으로 중복 제거
+        List<TmdbTVResponseDTO.TVResultDTO> uniqueTVs = new ArrayList<>(
+                allTVs.stream()
+                        .collect(Collectors.toMap(
+                                TmdbTVResponseDTO.TVResultDTO::getId,
+                                dto -> dto,
+                                (existing, replacement) -> existing
+                        ))
+                        .values()
+        );
+
+        log.info("Total {} TV series items to process.", uniqueTVs.size());
+
+        return new IteratorItemReader<>(uniqueTVs);
     }
 
     // 4. ItemProcessor 정의
