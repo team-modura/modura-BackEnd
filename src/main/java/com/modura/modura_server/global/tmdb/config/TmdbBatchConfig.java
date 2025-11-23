@@ -115,23 +115,35 @@ public class TmdbBatchConfig {
     @StepScope
     public ItemReader<TmdbMovieResponseDTO.MovieResultDTO> tmdbMovieItemReader() {
 
-        Queue<TmdbMovieResponseDTO.MovieResultDTO> movieQueue = new LinkedList<>();
+        Queue<TmdbMovieResponseDTO.MovieResultDTO> allMovies = new LinkedList<>();
 
         for (int page = 1; page <= TOTAL_PAGES_TO_FETCH; page++) {
             try {
                 log.info("Fetching TMDB newest movies page: {}", page);
                 TmdbMovieResponseDTO response = tmdbApiClient.fetchNewestMovies(page).block();
                 if (response != null && response.getResults() != null) {
-                    movieQueue.addAll(response.getResults());
+                    allMovies.addAll(response.getResults());
                 }
                 Thread.sleep(API_THROTTLE_MS);
             } catch (Exception e) {
                 log.warn("Failed to fetch newest movies page {} during reader initialization", page, e);
             }
         }
-        log.info("Total {} movie items to process.", movieQueue.size());
 
-        return new IteratorItemReader<>(movieQueue);
+        // API 응답 목록에서 ID 기준으로 중복 제거
+        List<TmdbMovieResponseDTO.MovieResultDTO> uniqueMovies = new ArrayList<>(
+                allMovies.stream()
+                        .collect(Collectors.toMap(
+                                TmdbMovieResponseDTO.MovieResultDTO::getId,
+                                dto -> dto,
+                                (existing, replacement) -> existing
+                        ))
+                        .values()
+        );
+
+        log.info("Total {} movie items to process.", uniqueMovies.size());
+
+        return new IteratorItemReader<>(uniqueMovies);
     }
 
     // 4. ItemProcessor 정의
@@ -281,23 +293,35 @@ public class TmdbBatchConfig {
     @StepScope
     public ItemReader<TmdbTVResponseDTO.TVResultDTO> tmdbTVItemReader() {
 
-        Queue<TmdbTVResponseDTO.TVResultDTO> tvQueue = new LinkedList<>();
+        Queue<TmdbTVResponseDTO.TVResultDTO> allTVs = new LinkedList<>();
         for (int page = 1; page <= TOTAL_PAGES_TO_FETCH; page++) {
 
             try {
                 log.info("Fetching TMDB newest TV series page: {}", page);
                 TmdbTVResponseDTO response = tmdbApiClient.fetchNewestTVs(page).block();
                 if (response != null && response.getResults() != null) {
-                    tvQueue.addAll(response.getResults());
+                    allTVs.addAll(response.getResults());
                 }
                 Thread.sleep(API_THROTTLE_MS);
             } catch (Exception e) {
                 log.warn("Failed to fetch newest TV series page {} during reader initialization", page, e);
             }
         }
-        log.info("Total {} TV series items to process.", tvQueue.size());
 
-        return new IteratorItemReader<>(tvQueue);
+        // API 응답 목록에서 ID 기준으로 중복 제거
+        List<TmdbTVResponseDTO.TVResultDTO> uniqueTVs = new ArrayList<>(
+                allTVs.stream()
+                        .collect(Collectors.toMap(
+                                TmdbTVResponseDTO.TVResultDTO::getId,
+                                dto -> dto,
+                                (existing, replacement) -> existing
+                        ))
+                        .values()
+        );
+
+        log.info("Total {} TV series items to process.", uniqueTVs.size());
+
+        return new IteratorItemReader<>(uniqueTVs);
     }
 
     // 4. ItemProcessor 정의
