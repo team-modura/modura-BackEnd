@@ -58,7 +58,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     // 의미없는 문자 패턴 (자음/모음 단독, 특수문자 반복 등)
     private static final Pattern NOISE_PATTERN = Pattern.compile("[ㄱ-ㅎㅏ-ㅣ]+$|[^가-힣a-zA-Z0-9\\s]+$");
 
-    private static final int PAGES_TO_FETCH = 25; // 25 페이지 * 20개 = 500개
+    private static final int PAGES_TO_FETCH = 50; // 50 페이지 * 20개 = 1000개
     private static final long API_THROTTLE_MS = 100;
     private static final String TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
@@ -94,118 +94,106 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         String trimmedQuery = query.trim();
 
         try {
-            if (trimmedQuery.contains(" ")) {
-                String queryToIncrement = NOISE_PATTERN.matcher(trimmedQuery)
-                        .replaceAll("")
-                        .trim();
-
-                if (StringUtils.hasText(queryToIncrement) && queryToIncrement.length() >= MIN_KEYWORD_LENGTH) {
-                    redisTemplate.opsForZSet().incrementScore(
-                            POPULAR_KEYWORD_KEY,
-                            queryToIncrement,
-                            1.0
-                    );
-                }
-            }
+            // 노이즈 제거 및 원본 쿼리 점수 증가
+            processOriginalQuery(trimmedQuery);
 
             // OKT를 사용한 형태소 분석
-            List<String> keywords = extractKeywords(trimmedQuery);
-
-            for (String keyword : keywords) {
-                if (keyword.length() >= MIN_KEYWORD_LENGTH) {
-                    redisTemplate.opsForZSet().incrementScore(
-                            POPULAR_KEYWORD_KEY,
-                            keyword,
-                            1.0
-                    );
-                }
-            }
+            processExtractedKeywords(trimmedQuery);
         } catch (Exception e) {
             log.error("Failed to increment popular keyword score in Redis for query: {}", trimmedQuery, e);
         }
     }
 
+    private void processOriginalQuery(String query) {
+
+        if (!query.contains(" ")) {
+            return;
+        }
+        String cleanQuery = NOISE_PATTERN.matcher(query).replaceAll("").trim();
+        if (StringUtils.hasText(cleanQuery) && cleanQuery.length() >= MIN_KEYWORD_LENGTH) {
+            redisTemplate.opsForZSet().incrementScore(POPULAR_KEYWORD_KEY, cleanQuery, 1.0);
+        }
+    }
+
+    private void processExtractedKeywords(String query) {
+
+        List<String> keywords = extractKeywords(query);
+        for (String keyword : keywords) {
+            if (keyword.length() >= MIN_KEYWORD_LENGTH) {
+                redisTemplate.opsForZSet().incrementScore(POPULAR_KEYWORD_KEY, keyword, 1.0);
+            }
+        }
+    }
+
     @Async
     @Override
-    public void seedMovie() {
+    public void seedPopularMovie() {
 
-        RLock lock = redissonClient.getLock(SEED_MOVIE_LOCK_KEY);
+        executeSeedingJob(
+                SEED_MOVIE_LOCK_KEY,
+                "Movie",
+                this::fetchPopularMovies,
+                TmdbMovieResponseDTO.MovieResultDTO::getId,
+                this::buildMovieList
+        );
+    }
+
+    @Async
+    @Override
+    public void seedPopularSeries() {
+
+        executeSeedingJob(
+                SEED_TV_LOCK_KEY,
+                "Series",
+                this::fetchPopularSeries,
+                TmdbTVResponseDTO.TVResultDTO::getId,
+                this::buildSeriesList
+        );
+    }
+
+    private <T> void executeSeedingJob(String lockKey,
+                                       String jobName,
+                                       java.util.function.Supplier<List<T>> listFetcher,
+                                       java.util.function.Function<T, Integer> idExtractor,
+                                       java.util.function.Function<List<T>, List<SearchCommandServiceImpl.ContentWithCategories>> detailProcessor) {
+
+        RLock lock = redissonClient.getLock(lockKey);
         boolean acquired = false;
 
         try {
             // 10초간 락 획득 시도, 락 획득 시 3분간 임대
             acquired = lock.tryLock(10, 180, TimeUnit.SECONDS);
-
-            // 락 획득 실패 시
             if (!acquired) {
-                log.warn("Movie seeding is already in progress.");
+                log.warn("{} seeding is already in progress.", jobName);
                 return;
             }
-            log.info("Acquired movie seeding lock. Starting manual seeding...");
+            log.info("Acquired {} seeding lock. Starting manual seeding...", jobName);
 
-            List<TmdbMovieResponseDTO.MovieResultDTO> movieDTOs = fetchPopularMovies();
-            if (movieDTOs.isEmpty()) {
-                log.warn("No movies fetched from TMDB discover API. Seeding job stopping.");
-                return;
-            }
-
-            // API 응답 목록에서 ID 기준으로 중복 제거
-            List<TmdbMovieResponseDTO.MovieResultDTO> uniqueMovieDTOs = new ArrayList<>(
-                    movieDTOs.stream()
-                            .collect(Collectors.toMap(
-                                    TmdbMovieResponseDTO.MovieResultDTO::getId,
-                                    dto -> dto,
-                                    (existing, replacement) -> existing
-                            ))
-                            .values()
-            );
-
-            Set<Integer> incomingTmdbIds = extractMovieIds(uniqueMovieDTOs);
-            Set<Integer> existingTmdbIds = fetchExistingContentIds(incomingTmdbIds);
-            Set<Integer> blacklistedTmdbIds = fetchBlacklistedIds();
-
-            List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess = uniqueMovieDTOs.stream()
-                    .filter(dto -> !existingTmdbIds.contains(dto.getId()))
-                    .filter(dto -> !blacklistedTmdbIds.contains(dto.getId()))
-                    .collect(Collectors.toList());
-
-            if (moviesToProcess.isEmpty()) {
-                log.info("Seeding job complete.");
+            // 1. 인기 목록 조회
+            List<T> allItems = listFetcher.get();
+            if (allItems.isEmpty()) {
+                log.warn("No {} fetched from TMDB API.", jobName);
                 return;
             }
 
-            List<ContentWithCategories> processedItems = buildMovieList(moviesToProcess);
-            List<Content> newContentList = processedItems.stream()
-                    .map(item -> item.content)
-                    .collect(Collectors.toList());
-
-            saveIfNotEmpty(newContentList, "movies");
-
-            // ContentCategory 저장
-            List<ContentCategory> newContentCategories = processedItems.stream()
-                    .flatMap(item -> {
-                        Content savedContent = item.content;
-                        return item.categories.stream()
-                                .map(category -> ContentCategory.builder()
-                                        .content(savedContent)
-                                        .category(category)
-                                        .build());
-                    })
-                    .collect(Collectors.toList());
-
-            if (!newContentCategories.isEmpty()) {
-                log.info("Saving {} new content-category links for movies.", newContentCategories.size());
-                transactionTemplate.executeWithoutResult(status -> {
-                    contentCategoryRepository.saveAll(newContentCategories);
-                });
+            // 2. 중복 제거 및 DB/블랙리스트 필터링
+            List<T> newItems = filterNewContents(allItems, idExtractor);
+            if (newItems.isEmpty()) {
+                log.info("No new {} to save.", jobName);
+                return;
             }
+
+            // 3. 상세 정보 조회 및 엔티티 변환
+            List<ContentWithCategories> processedData = detailProcessor.apply(newItems);
+
+            // 4. 저장
+            saveContentBatch(processedData, jobName);
+
         } catch (InterruptedException e) {
-            // 락을 기다리는 도중 인터럽트 발생 시
             Thread.currentThread().interrupt();
-            log.warn("Movie seeding interrupted while waiting for lock.");
+            log.warn("{} seeding interrupted.", jobName);
         } catch (Exception e) {
-            // 시딩 로직 자체에서 예외 발생 시
-            log.error("Error during manual movie seeding: {}", e.getMessage(), e);
+            log.error("Error during {} seeding: {}", jobName, e.getMessage(), e);
         } finally {
             if (acquired && lock.isHeldByCurrentThread()) {
                 lock.unlock();
@@ -213,92 +201,61 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         }
     }
 
-    @Async
-    @Override
-    public void seedSeries() {
+    private <T> List<T> filterNewContents(List<T> items, java.util.function.Function<T, Integer> idExtractor) {
 
-        RLock lock = redissonClient.getLock(SEED_TV_LOCK_KEY);
-        boolean acquired = false;
+        List<T> uniqueItems = new ArrayList<>(
+                items.stream()
+                        .collect(Collectors.toMap(
+                                idExtractor,
+                                item -> item,
+                                (existing, replacement) -> existing
+                        ))
+                        .values()
+        );
 
-        try {
-            // 10초간 락 획득 시도, 락 획득 시 3분간 임대
-            acquired = lock.tryLock(10, 180, TimeUnit.SECONDS);
+        Set<Integer> incomingIds = uniqueItems.stream()
+                .map(idExtractor)
+                .collect(Collectors.toSet());
 
-            // 락 획득 실패 시
-            if (!acquired) {
-                log.warn("Series seeding is already in progress.");
-                return;
-            }
-            log.info("Acquired series seeding lock. Starting manual seeding...");
+        Set<Integer> existingIds = fetchExistingContentIds(incomingIds);
+        Set<Integer> blacklistedIds = fetchBlacklistedIds();
 
-            List<TmdbTVResponseDTO.TVResultDTO> seriesDTOs = fetchPopularSeries();
-            if (seriesDTOs.isEmpty()) {
-                log.warn("No series fetched from TMDB discover API. Seeding job stopping.");
-                return;
-            }
+        return uniqueItems.stream()
+                .filter(item -> {
+                    Integer id = idExtractor.apply(item);
+                    return !existingIds.contains(id) && !blacklistedIds.contains(id);
+                })
+                .collect(Collectors.toList());
+    }
 
-            // API 응답 목록에서 ID 기준으로 중복 제거
-            List<TmdbTVResponseDTO.TVResultDTO> uniqueMovieDTOs = new ArrayList<>(
-                    seriesDTOs.stream()
-                            .collect(Collectors.toMap(
-                                    TmdbTVResponseDTO.TVResultDTO::getId,
-                                    dto -> dto,
-                                    (existing, replacement) -> existing
-                            ))
-                            .values()
-            );
+    private void saveContentBatch(List<ContentWithCategories> processedData, String contentType) {
 
-            Set<Integer> incomingTmdbIds = extractSeriesIds(uniqueMovieDTOs);
-            Set<Integer> existingTmdbIds = fetchExistingContentIds(incomingTmdbIds);
-            Set<Integer> blacklistedTmdbIds = fetchBlacklistedIds();
+        if (processedData.isEmpty()) {
+            return;
+        }
 
-            List<TmdbTVResponseDTO.TVResultDTO> seriesToProcess = uniqueMovieDTOs.stream()
-                    .filter(dto -> !existingTmdbIds.contains(dto.getId()))
-                    .filter(dto -> !blacklistedTmdbIds.contains(dto.getId()))
-                    .collect(Collectors.toList());
-
-            if (seriesToProcess.isEmpty()) {
-                log.info("Seeding job complete.");
-                return;
-            }
-
-            List<ContentWithCategories> processedItems = buildSeriesList(seriesToProcess);
-            List<Content> newContentList = processedItems.stream()
+        transactionTemplate.executeWithoutResult(status -> {
+            // Content 저장
+            List<Content> contents = processedData.stream()
                     .map(item -> item.content)
                     .collect(Collectors.toList());
-
-            saveIfNotEmpty(newContentList, "series");
+            contentRepository.saveAll(contents);
 
             // ContentCategory 저장
-            List<ContentCategory> newContentCategories = processedItems.stream()
-                    .flatMap(item -> {
-                        Content savedContent = item.content;
-                        return item.categories.stream()
-                                .map(category -> ContentCategory.builder()
-                                        .content(savedContent)
-                                        .category(category)
-                                        .build());
-                    })
+            List<ContentCategory> categories = processedData.stream()
+                    .flatMap(item -> item.categories.stream()
+                            .map(category -> ContentCategory.builder()
+                                    .content(item.content)
+                                    .category(category)
+                                    .build()))
                     .collect(Collectors.toList());
 
-            if (!newContentCategories.isEmpty()) {
-                log.info("Saving {} new content-category links for series.", newContentCategories.size());
-                transactionTemplate.executeWithoutResult(status -> {
-                    contentCategoryRepository.saveAll(newContentCategories);
-                });
+            if (!categories.isEmpty()) {
+                contentCategoryRepository.saveAll(categories);
             }
-        } catch (InterruptedException e) {
-            // 락을 기다리는 도중 인터럽트 발생 시
-            Thread.currentThread().interrupt();
-            log.warn("Series seeding interrupted while waiting for lock.");
-        } catch (Exception e) {
-            // 시딩 로직 자체에서 예외 발생 시
-            log.error("Error during manual series seeding: {}", e.getMessage(), e);
-        } finally {
-            if (acquired && lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }
-        }
+        });
+
+        log.info("Successfully saved {} new {} items.", processedData.size(), contentType);
     }
 
     @Transactional
@@ -386,22 +343,6 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         }
 
         return keywords;
-    }
-
-    private Set<Integer> extractMovieIds(List<TmdbMovieResponseDTO.MovieResultDTO> movieDtos) {
-        Set<Integer> ids = movieDtos.stream()
-                .map(TmdbMovieResponseDTO.MovieResultDTO::getId)
-                .collect(Collectors.toSet());
-        log.info("Fetched {} unique movie IDs from TMDB.", ids.size());
-        return ids;
-    }
-
-    private Set<Integer> extractSeriesIds(List<TmdbTVResponseDTO.TVResultDTO> seriesDtos) {
-        Set<Integer> ids = seriesDtos.stream()
-                .map(TmdbTVResponseDTO.TVResultDTO::getId)
-                .collect(Collectors.toSet());
-        log.info("Fetched {} unique series IDs from TMDB.", ids.size());
-        return ids;
     }
 
     private Set<Integer> fetchExistingContentIds(Set<Integer> tmdbIds) {
@@ -506,14 +447,5 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 .map(genreId -> this.categoryMap.get(Long.valueOf(genreId)))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-    }
-
-    private void saveIfNotEmpty(List<Content> contents, String contentType) {
-        if (!contents.isEmpty()) {
-            saveContentsInTransaction(contents);
-            log.info("Successfully saved {} new contents to the database.", contents.size());
-        } else {
-            log.info("No contents were saved after fetching details.");
-        }
     }
 }

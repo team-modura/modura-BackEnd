@@ -74,11 +74,11 @@ public class SearchController {
         return ApiResponse.onSuccess(response);
     }
 
-    @Operation(summary = "TMDB Movie Seeding", description = "인기순으로 영화 500개 저장")
-    @PostMapping("/seeding/movie")
-    public ApiResponse<Void> seedMovie() {
+    @Operation(summary = "TMDB Movie Seeding", description = "인기순으로 영화 1000개 저장")
+    @PostMapping("/seeding/popularMovie")
+    public ApiResponse<Void> seedPopularMovie() {
 
-        searchCommandService.seedMovie();
+        searchCommandService.seedPopularMovie();
 
         return ApiResponse.onSuccess(null);
     }
@@ -93,11 +93,11 @@ public class SearchController {
         return ApiResponse.onSuccess(response);
     }
 
-    @Operation(summary = "TMDB Series Seeding", description = "인기순으로 시리즈 500개 저장")
-    @PostMapping("/seeding/series")
-    public ApiResponse<Void> seedSeries() {
+    @Operation(summary = "TMDB Series Seeding", description = "인기순으로 시리즈 1000개 저장")
+    @PostMapping("/seeding/popularSeries")
+    public ApiResponse<Void> seedPopularSeries() {
 
-        searchCommandService.seedSeries();
+        searchCommandService.seedPopularSeries();
 
         return ApiResponse.onSuccess(null);
     }
