@@ -4,5 +4,7 @@ public interface SearchCommandService {
 
     void incrementSearchKeyword(String query);
     void seedPopularMovie();
+    void seedNewestMovie();
     void seedPopularSeries();
+    void seedNewestSeries();
 }

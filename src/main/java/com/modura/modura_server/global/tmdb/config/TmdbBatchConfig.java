@@ -48,7 +48,7 @@ public class TmdbBatchConfig {
     private final PlatformRepository platformRepository;
 
     private static final int CHUNK_SIZE = 20; // 한 번에 처리(Write)할 항목 수
-    private static final int TOTAL_PAGES_TO_FETCH = 5; // 가져올 총 페이지 수
+    private static final int TOTAL_PAGES_TO_FETCH = 2; // 가져올 총 페이지 수
     private static final long API_THROTTLE_MS = 100; // API 호출 간 딜레이
     private static final String TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
@@ -76,17 +76,6 @@ public class TmdbBatchConfig {
             this.content = content;
             this.categories = categories;
             this.platformNames = platformNames;
-        }
-    }
-
-    private static class ContentWithCategories {
-
-        final Content content;
-        final List<Category> categories;
-
-        ContentWithCategories(Content content, List<Category> categories) {
-            this.content = content;
-            this.categories = categories;
         }
     }
 

@@ -83,6 +83,15 @@ public class SearchController {
         return ApiResponse.onSuccess(null);
     }
 
+    @Operation(summary = "TMDB Movie Seeding", description = "최신순으로 영화 200개 저장")
+    @PostMapping("/seeding/newestMovie")
+    public ApiResponse<Void> seedNewestMovie() {
+
+        searchCommandService.seedNewestMovie();
+
+        return ApiResponse.onSuccess(null);
+    }
+
     @Operation(summary = "TOP 10 시리즈 조회")
     @GetMapping("/top/series")
     public ApiResponse<SearchResponseDTO.GetTopContentListDTO> getTopSeries(@AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -98,6 +107,15 @@ public class SearchController {
     public ApiResponse<Void> seedPopularSeries() {
 
         searchCommandService.seedPopularSeries();
+
+        return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "TMDB Movie Seeding", description = "최신순으로 영화 200개 저장")
+    @PostMapping("/seeding/newestSeries")
+    public ApiResponse<Void> seedNewestSeries() {
+
+        searchCommandService.seedNewestSeries();
 
         return ApiResponse.onSuccess(null);
     }

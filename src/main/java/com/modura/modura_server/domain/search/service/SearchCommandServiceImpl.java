@@ -25,10 +25,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
+import reactor.core.publisher.Mono;
 import scala.collection.Seq;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -58,7 +60,8 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     // 의미없는 문자 패턴 (자음/모음 단독, 특수문자 반복 등)
     private static final Pattern NOISE_PATTERN = Pattern.compile("[ㄱ-ㅎㅏ-ㅣ]+$|[^가-힣a-zA-Z0-9\\s]+$");
 
-    private static final int PAGES_TO_FETCH = 50; // 50 페이지 * 20개 = 1000개
+    private static final int POPULAR_PAGES_TO_FETCH = 50; // 인기 컨텐츠 50페이지 (1000개)
+    private static final int NEWEST_PAGES_TO_FETCH = 10;  // 최신 컨텐츠 10페이지 (200개)
     private static final long API_THROTTLE_MS = 100;
     private static final String TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
@@ -132,7 +135,19 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         executeSeedingJob(
                 SEED_MOVIE_LOCK_KEY,
                 "Movie",
-                this::fetchPopularMovies,
+                () -> fetchMovies(POPULAR_PAGES_TO_FETCH, tmdbApiClient::fetchPopularMovies),
+                TmdbMovieResponseDTO.MovieResultDTO::getId,
+                this::buildMovieList
+        );
+    }
+
+    @Override
+    public void seedNewestMovie() {
+
+        executeSeedingJob(
+                SEED_MOVIE_LOCK_KEY,
+                "Movie",
+                () -> fetchMovies(NEWEST_PAGES_TO_FETCH, tmdbApiClient::fetchNewestMovies),
                 TmdbMovieResponseDTO.MovieResultDTO::getId,
                 this::buildMovieList
         );
@@ -145,7 +160,19 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         executeSeedingJob(
                 SEED_TV_LOCK_KEY,
                 "Series",
-                this::fetchPopularSeries,
+                () -> fetchSeries(POPULAR_PAGES_TO_FETCH, tmdbApiClient::fetchPopularTVs),
+                TmdbTVResponseDTO.TVResultDTO::getId,
+                this::buildSeriesList
+        );
+    }
+
+    @Override
+    public void seedNewestSeries() {
+
+        executeSeedingJob(
+                SEED_TV_LOCK_KEY,
+                "Series",
+                () -> fetchSeries(NEWEST_PAGES_TO_FETCH, tmdbApiClient::fetchNewestTVs),
                 TmdbTVResponseDTO.TVResultDTO::getId,
                 this::buildSeriesList
         );
@@ -265,13 +292,13 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         });
     }
 
-    private List<TmdbMovieResponseDTO.MovieResultDTO> fetchPopularMovies() {
+    private List<TmdbMovieResponseDTO.MovieResultDTO> fetchMovies(int pages, Function<Integer, Mono<TmdbMovieResponseDTO>> apiFetcher) {
 
         List<TmdbMovieResponseDTO.MovieResultDTO> allMovies = new ArrayList<>();
-        for (int page = 1; page <= PAGES_TO_FETCH; page++) {
+        for (int page = 1; page <= pages; page++) {
             try {
-                log.debug("Fetching TMDB discover page: {}", page);
-                TmdbMovieResponseDTO response = tmdbApiClient.fetchPopularMovies(page).block();
+                log.debug("Fetching TMDB movie page: {}", page);
+                TmdbMovieResponseDTO response = apiFetcher.apply(page).block();
                 if (response != null && response.getResults() != null) {
                     allMovies.addAll(response.getResults());
                 }
@@ -283,13 +310,12 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         return allMovies;
     }
 
-    private List<TmdbTVResponseDTO.TVResultDTO> fetchPopularSeries() {
-
+    private List<TmdbTVResponseDTO.TVResultDTO> fetchSeries(int pages, Function<Integer, Mono<TmdbTVResponseDTO>> apiFetcher) {
         List<TmdbTVResponseDTO.TVResultDTO> allSeries = new ArrayList<>();
-        for (int page = 1; page <= PAGES_TO_FETCH; page++) {
+        for (int page = 1; page <= pages; page++) {
             try {
-                log.debug("Fetching TMDB discover page: {}", page);
-                TmdbTVResponseDTO response = tmdbApiClient.fetchPopularTVs(page).block();
+                log.debug("Fetching TMDB series page: {}", page);
+                TmdbTVResponseDTO response = apiFetcher.apply(page).block();
                 if (response != null && response.getResults() != null) {
                     allSeries.addAll(response.getResults());
                 }
