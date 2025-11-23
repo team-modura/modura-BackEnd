@@ -3,14 +3,13 @@ package com.modura.modura_server.domain.search.service;
 import com.modura.modura_server.domain.content.entity.Category;
 import com.modura.modura_server.domain.content.entity.Content;
 import com.modura.modura_server.domain.content.entity.ContentCategory;
+import com.modura.modura_server.domain.content.entity.Platform;
 import com.modura.modura_server.domain.content.repository.CategoryRepository;
 import com.modura.modura_server.domain.content.repository.ContentCategoryRepository;
 import com.modura.modura_server.domain.content.repository.ContentRepository;
+import com.modura.modura_server.domain.content.repository.PlatformRepository;
 import com.modura.modura_server.global.tmdb.client.TmdbApiClient;
-import com.modura.modura_server.global.tmdb.dto.TmdbMovieDetailResponseDTO;
-import com.modura.modura_server.global.tmdb.dto.TmdbMovieResponseDTO;
-import com.modura.modura_server.global.tmdb.dto.TmdbTVDetailResponseDTO;
-import com.modura.modura_server.global.tmdb.dto.TmdbTVResponseDTO;
+import com.modura.modura_server.global.tmdb.dto.*;
 import com.modura.modura_server.global.tmdb.repository.TmdbBlacklistRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
 import scala.collection.Seq;
 
 import java.util.*;
@@ -49,6 +49,8 @@ public class SearchCommandServiceImpl implements SearchCommandService {
 
     private final CategoryRepository categoryRepository;
     private final ContentCategoryRepository contentCategoryRepository;
+    private final PlatformRepository platformRepository;
+
     private Map<Long, Category> categoryMap;
 
     private static final String POPULAR_KEYWORD_KEY = "popular:keywords";
@@ -79,10 +81,12 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     private static class ContentWithCategories {
         final Content content;
         final List<Category> categories;
+        final List<String> platformNames;
 
-        ContentWithCategories(Content content, List<Category> categories) {
+        ContentWithCategories(Content content, List<Category> categories, List<String> platformNames) {
             this.content = content;
             this.categories = categories;
+            this.platformNames = platformNames;
         }
     }
 
@@ -280,16 +284,21 @@ public class SearchCommandServiceImpl implements SearchCommandService {
             if (!categories.isEmpty()) {
                 contentCategoryRepository.saveAll(categories);
             }
+
+            List<Platform> platforms = processedData.stream()
+                    .flatMap(item -> item.platformNames.stream()
+                            .map(name -> Platform.builder()
+                                    .content(item.content)
+                                    .name(name)
+                                    .build()))
+                    .collect(Collectors.toList());
+
+            if (!platforms.isEmpty()) {
+                platformRepository.saveAll(platforms);
+            }
         });
 
         log.info("Successfully saved {} new {} items.", processedData.size(), contentType);
-    }
-
-    @Transactional
-    public void saveContentsInTransaction(List<Content> contents) {
-        transactionTemplate.executeWithoutResult(status -> {
-            contentRepository.saveAll(contents);
-        });
     }
 
     private List<TmdbMovieResponseDTO.MovieResultDTO> fetchMovies(int pages, Function<Integer, Mono<TmdbMovieResponseDTO>> apiFetcher) {
@@ -311,6 +320,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     }
 
     private List<TmdbTVResponseDTO.TVResultDTO> fetchSeries(int pages, Function<Integer, Mono<TmdbTVResponseDTO>> apiFetcher) {
+
         List<TmdbTVResponseDTO.TVResultDTO> allSeries = new ArrayList<>();
         for (int page = 1; page <= pages; page++) {
             try {
@@ -328,6 +338,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     }
 
     private Integer parseYearFromDate(String releaseDate) {
+
         if (releaseDate == null || releaseDate.isBlank() || releaseDate.length() < 4) {
             return null;
         }
@@ -372,6 +383,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     }
 
     private Set<Integer> fetchExistingContentIds(Set<Integer> tmdbIds) {
+
         Set<Integer> existingIds = contentRepository.findAllByTmdbIdIn(tmdbIds)
                 .stream().map(Content::getTmdbId)
                 .collect(Collectors.toSet());
@@ -380,12 +392,14 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     }
 
     private Set<Integer> fetchBlacklistedIds() {
+
         Set<Integer> blacklist = tmdbBlacklistRepository.findAllTmdbIds();
         log.info("Found {} blacklisted content IDs.", blacklist.size());
         return blacklist;
     }
 
     private List<ContentWithCategories> buildMovieList(List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess) {
+
         log.info("Fetching details for {} new movies...", moviesToProcess.size());
         return moviesToProcess.stream()
                 .map(this::fetchDetailsAndBuildMovie)
@@ -395,8 +409,20 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     }
 
     private Optional<ContentWithCategories> fetchDetailsAndBuildMovie(TmdbMovieResponseDTO.MovieResultDTO listDto) {
+
         try {
-            TmdbMovieDetailResponseDTO detailDto = tmdbApiClient.fetchMovieDetails(listDto.getId()).block();
+            // Mono.zip을 사용하여 상세 정보와 Provider 정보를 병렬 호출
+            Mono<TmdbMovieDetailResponseDTO> detailMono = tmdbApiClient.fetchMovieDetails(listDto.getId())
+                    .onErrorResume(e -> Mono.empty());
+            Mono<TmdbProviderResponseDTO> providerMono = tmdbApiClient.fetchMovieProviders(listDto.getId())
+                    .onErrorResume(e -> Mono.empty());
+
+            Tuple2<TmdbMovieDetailResponseDTO, TmdbProviderResponseDTO> responses =
+                    Mono.zip(detailMono, providerMono).block();
+
+            TmdbMovieDetailResponseDTO detailDto = (responses != null) ? responses.getT1() : null;
+            TmdbProviderResponseDTO providerDto = (responses != null) ? responses.getT2() : null;
+
             Thread.sleep(API_THROTTLE_MS);
 
             if (detailDto == null) {
@@ -417,7 +443,20 @@ public class SearchCommandServiceImpl implements SearchCommandService {
 
             List<Category> categories = mapGenreIdsToCategories(listDto.getGenreIds());
 
-            return Optional.of(new ContentWithCategories(content, categories));
+            // Provider 정보 파싱
+            List<String> platformNames = Optional.ofNullable(providerDto)
+                    .map(TmdbProviderResponseDTO::getResults)
+                    .map(TmdbProviderResponseDTO.Results::getKR)
+                    .map(TmdbProviderResponseDTO.ProviderCountryDetails::getFlatrate)
+                    .orElse(Collections.emptyList())
+                    .stream()
+                    .map(TmdbProviderResponseDTO.ProviderInfo::getProviderName)
+                    .filter(Objects::nonNull)
+                    .filter(name -> !"Netflix Standard with Ads".equals(name))
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            return Optional.of(new ContentWithCategories(content, categories, platformNames));
         } catch (Exception e) {
             log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
             return Optional.empty();
@@ -425,6 +464,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     }
 
     private List<ContentWithCategories> buildSeriesList(List<TmdbTVResponseDTO.TVResultDTO> seriesToProcess) {
+
         log.info("Fetching details for {} new series...", seriesToProcess.size());
         return seriesToProcess.stream()
                 .map(this::fetchDetailsAndBuildSeries)
@@ -434,8 +474,20 @@ public class SearchCommandServiceImpl implements SearchCommandService {
     }
 
     private Optional<ContentWithCategories> fetchDetailsAndBuildSeries(TmdbTVResponseDTO.TVResultDTO listDto) {
+
         try {
-            TmdbTVDetailResponseDTO detailDto = tmdbApiClient.fetchTVDetails(listDto.getId()).block();
+            // Mono.zip을 사용하여 상세 정보와 Provider 정보를 병렬 호출
+            Mono<TmdbTVDetailResponseDTO> detailMono = tmdbApiClient.fetchTVDetails(listDto.getId())
+                    .onErrorResume(e -> Mono.empty());
+            Mono<TmdbProviderResponseDTO> providerMono = tmdbApiClient.fetchTVProviders(listDto.getId())
+                    .onErrorResume(e -> Mono.empty());
+
+            Tuple2<TmdbTVDetailResponseDTO, TmdbProviderResponseDTO> responses =
+                    Mono.zip(detailMono, providerMono).block();
+
+            TmdbTVDetailResponseDTO detailDto = (responses != null) ? responses.getT1() : null;
+            TmdbProviderResponseDTO providerDto = (responses != null) ? responses.getT2() : null;
+
             Thread.sleep(API_THROTTLE_MS);
 
             if (detailDto == null) {
@@ -455,7 +507,20 @@ public class SearchCommandServiceImpl implements SearchCommandService {
 
             List<Category> categories = mapGenreIdsToCategories(listDto.getGenreIds());
 
-            return Optional.of(new ContentWithCategories(content, categories));
+            // Provider 정보 파싱
+            List<String> platformNames = Optional.ofNullable(providerDto)
+                    .map(TmdbProviderResponseDTO::getResults)
+                    .map(TmdbProviderResponseDTO.Results::getKR)
+                    .map(TmdbProviderResponseDTO.ProviderCountryDetails::getFlatrate)
+                    .orElse(Collections.emptyList())
+                    .stream()
+                    .map(TmdbProviderResponseDTO.ProviderInfo::getProviderName)
+                    .filter(Objects::nonNull)
+                    .filter(name -> !"Netflix Standard with Ads".equals(name))
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            return Optional.of(new ContentWithCategories(content, categories, platformNames));
 
         } catch (Exception e) {
             log.warn("Failed to process item for tmdbId {}: {}", listDto.getId(), e.getMessage());
