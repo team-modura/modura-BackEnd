@@ -25,6 +25,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import scala.collection.Seq;
 
@@ -174,7 +175,7 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                                        String jobName,
                                        java.util.function.Supplier<List<T>> listFetcher,
                                        java.util.function.Function<T, Integer> idExtractor,
-                                       java.util.function.Function<List<T>, List<SearchCommandServiceImpl.ContentWithCategories>> detailProcessor) {
+                                       java.util.function.Function<List<T>, Flux<ContentWithCategories>> detailProcessor) {
 
         RLock lock = redissonClient.getLock(lockKey);
         boolean acquired = false;
@@ -203,10 +204,11 @@ public class SearchCommandServiceImpl implements SearchCommandService {
             }
 
             // 3. 상세 정보 조회 및 엔티티 변환
-            List<ContentWithCategories> processedData = detailProcessor.apply(newItems);
-
-            // 4. 저장
-            saveContentBatch(processedData, jobName);
+            detailProcessor.apply(newItems)
+                    .buffer(20) // 20개씩 데이터를 모음 (Batch)
+                    .publishOn(Schedulers.boundedElastic()) // DB 저장(Blocking I/O)은 별도 스레드 풀에서 실행
+                    .doOnNext(batch -> saveContentBatch(batch, jobName)) // 배치 단위로 DB 저장
+                    .blockLast();
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -394,13 +396,12 @@ public class SearchCommandServiceImpl implements SearchCommandService {
         return blacklist;
     }
 
-    private List<ContentWithCategories> buildMovieList(List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess) {
+    private Flux<ContentWithCategories> buildMovieList(List<TmdbMovieResponseDTO.MovieResultDTO> moviesToProcess) {
 
         log.info("Fetching details for {} new movies...", moviesToProcess.size());
+
         return Flux.fromIterable(moviesToProcess)
-                .flatMap(this::fetchDetailsAndBuildMovie, 5) // 동시 처리 수 제한
-                .collectList()
-                .block();
+                .flatMap(this::fetchDetailsAndBuildMovie, 10);
     }
 
     private Mono<ContentWithCategories> fetchDetailsAndBuildMovie(TmdbMovieResponseDTO.MovieResultDTO listDto) {
@@ -439,13 +440,11 @@ public class SearchCommandServiceImpl implements SearchCommandService {
                 .build();
     }
 
-    private List<ContentWithCategories> buildSeriesList(List<TmdbTVResponseDTO.TVResultDTO> seriesToProcess) {
+    private Flux<ContentWithCategories> buildSeriesList(List<TmdbTVResponseDTO.TVResultDTO> seriesToProcess) {
 
         log.info("Fetching details for {} new series...", seriesToProcess.size());
         return Flux.fromIterable(seriesToProcess)
-                .flatMap(this::fetchDetailsAndBuildSeries, 5) // 동시 처리 수 제한
-                .collectList()
-                .block();
+                .flatMap(this::fetchDetailsAndBuildSeries, 10);
     }
 
     private Mono<ContentWithCategories> fetchDetailsAndBuildSeries(TmdbTVResponseDTO.TVResultDTO listDto) {
