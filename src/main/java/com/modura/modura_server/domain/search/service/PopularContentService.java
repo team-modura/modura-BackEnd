@@ -29,7 +29,7 @@ public class PopularContentService {
     private static final Duration CACHE_DURATION = Duration.ofHours(1);
 
     private static final int TARGET_COUNT = 10;
-    private static final int MAX_PAGES_TO_FETCH = 5;
+    private static final int MAX_PAGES_TO_FETCH = 10;
     private static final int FETCH_BUFFER_MULTIPLIER = 3;
 
     public PopularContentService(TmdbApiClient tmdbApiClient,

@@ -7,6 +7,8 @@ import org.redisson.api.RedissonClient;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -37,8 +39,19 @@ public class TmdbJobScheduler {
         this.redissonClient = redissonClient;
     }
 
+    @EventListener(ApplicationReadyEvent.class)
+    public void runJobOnStartup() {
+        log.info("Application started. Triggering initial TMDB seeding...");
+        executeSeedingFlow("Startup");
+    }
+
     @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
     public void runJobPeriodically() {
+        log.info("Running scheduled TMDB seeding...");
+        executeSeedingFlow("Scheduled");
+    }
+
+    private void executeSeedingFlow(String triggerType) {
 
         // 1. 영화 작업 실행
         boolean movieJobSuccess = runMovieJob();
@@ -48,11 +61,11 @@ public class TmdbJobScheduler {
 
         // 3. 캐시 갱신 (두 작업 중 하나라도 성공했다면 갱신)
         if (movieJobSuccess || tvJobSuccess) {
-            log.info("Running periodic popular content cache refresh...");
+            log.info("[{}] Running popular content cache refresh...", triggerType);
             popularContentService.refreshPopularMovies();
             popularContentService.refreshPopularTVs();
         } else {
-            log.warn("Skipping cache refresh as all seeding jobs failed or were skipped.");
+            log.warn("[{}] Skipping cache refresh as all seeding jobs failed or were skipped (locked).", triggerType);
         }
     }
 
