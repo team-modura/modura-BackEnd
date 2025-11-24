@@ -12,7 +12,6 @@ import com.modura.modura_server.domain.place.repository.PlaceLikesRepository;
 import com.modura.modura_server.domain.place.repository.PlaceRepository;
 import com.modura.modura_server.domain.place.repository.PlaceReviewRepository;
 import com.modura.modura_server.domain.place.repository.ReviewImageRepository;
-import com.modura.modura_server.domain.user.converter.UserConverter;
 import com.modura.modura_server.domain.user.entity.Stillcut;
 import com.modura.modura_server.domain.user.entity.User;
 import com.modura.modura_server.domain.user.repository.StillcutRepository;
@@ -52,7 +51,34 @@ public class PlaceQueryServiceImpl implements PlaceQueryService {
 
         List<Stillcut> stillcutList = stillcutRepository.findByPlaceIdWithContent(placeId);
 
-        return UserConverter.toGetStillcutListDTO(stillcutList);
+        if (stillcutList.isEmpty()) {
+            return PlaceResponseDTO.GetStillcutListDTO.builder()
+                    .stillcutList(Collections.emptyList())
+                    .build();
+        }
+
+        List<String> s3Keys = stillcutList.stream()
+                .map(Stillcut::getImageUrl)
+                .toList();
+
+        List<String> presignedUrls = s3Service.generateViewPresignedUrls(s3Keys);
+
+        List<PlaceResponseDTO.GetStillcutDTO> stillcutDTOList = new ArrayList<>();
+        for (int i = 0; i < stillcutList.size(); i++) {
+            Stillcut stillcut = stillcutList.get(i);
+            String presignedUrl = presignedUrls.get(i);
+
+            stillcutDTOList.add(PlaceResponseDTO.GetStillcutDTO.builder()
+                    .stillcutId(stillcut.getId())
+                    .contentId(stillcut.getContent().getId())
+                    .title(stillcut.getContent().getTitleKr())
+                    .imageUrl(presignedUrl)
+                    .build());
+        }
+
+        return PlaceResponseDTO.GetStillcutListDTO.builder()
+                .stillcutList(stillcutDTOList)
+                .build();
     }
 
     @Override
